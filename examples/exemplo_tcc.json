@@ -1,0 +1,120 @@
+{
+  "metadados": {
+    "titulo": "Inteligência Artificial na Educação",
+    "subtitulo": "Um Estudo sobre Personalização do Aprendizado",
+    "autores": [
+      {
+        "nome_completo": "Maria Silva Santos",
+        "afiliacao": "Universidade Federal do Brasil"
+      }
+    ],
+    "tipo": "tcc",
+    "instituicao": "Universidade Federal do Brasil",
+    "curso": "Ciência da Computação",
+    "cidade": "Brasília",
+    "estado": "DF",
+    "ano": 2024,
+    "orientador": "Prof. Dr. João Oliveira",
+    "palavras_chave": ["inteligência artificial", "educação", "personalização", "aprendizado"],
+    "abstract": "This paper investigates the application of artificial intelligence in educational personalization..."
+  },
+  "resumo": "Este trabalho investiga a aplicação de inteligência artificial na personalização do aprendizado em ambientes educacionais. A pesquisa analisa algoritmos de recomendação adaptativa e seu impacto no desempenho acadêmico de estudantes do ensino superior. Os resultados demonstram que sistemas baseados em IA podem melhorar significativamente a experiência de aprendizado ao oferecer conteúdo personalizado conforme o perfil e ritmo de cada estudante.",
+  "secoes": [
+    {
+      "titulo": "Introdução",
+      "nivel": 1,
+      "conteudo": [
+        "A evolução da tecnologia tem transformado diversos setores da sociedade, e a educação não é exceção. Nos últimos anos, a Inteligência Artificial (IA) emergiu como uma ferramenta promissora para revolucionar os métodos tradicionais de ensino e aprendizagem (SILVA, 2023).",
+        "Diante deste cenário, o presente trabalho busca investigar como algoritmos de IA podem ser aplicados para personalizar a experiência de aprendizado, adaptando conteúdos e metodologias às necessidades individuais de cada estudante.",
+        "O objetivo geral desta pesquisa é analisar o impacto de sistemas inteligentes de recomendação no desempenho acadêmico de estudantes do ensino superior, contribuindo para o avanço do conhecimento na área de tecnologia educacional."
+      ]
+    },
+    {
+      "titulo": "Revisão Bibliográfica",
+      "nivel": 1,
+      "conteudo": [
+        "A revisão da literatura apresenta os principais conceitos e trabalhos relacionados à aplicação de IA na educação."
+      ],
+      "subsecoes": [
+        {
+          "titulo": "Inteligência Artificial Conceituação",
+          "nivel": 2,
+          "conteudo": [
+            "A Inteligência Artificial pode ser definida como o ramo da ciência da computação dedicado a criar sistemas capazes de realizar tarefas que normalmente requerem inteligência humana (RUSSELL; NORVIG, 2021)."
+          ]
+        },
+        {
+          "titulo": "Personalização do Aprendizado",
+          "nivel": 2,
+          "conteudo": [
+            "A personalização do aprendizado consiste em adaptar o processo educacional às características individuais de cada estudante, considerando seu ritmo, estilo de aprendizagem e interesses (CHEN; CHEN, 2022)."
+          ]
+        }
+      ]
+    },
+    {
+      "titulo": "Metodologia",
+      "nivel": 1,
+      "conteudo": [
+        "A pesquisa foi conduzida em três fases distintas. Na primeira fase, realizou-se uma revisão sistemática da literatura sobre IA aplicada à educação. Na segunda fase, desenvolveu-se um protótipo de sistema de recomendação. Na terceira fase, conduziu-se um experimento controlado com 120 estudantes."
+      ]
+    },
+    {
+      "titulo": "Resultados e Discussão",
+      "nivel": 1,
+      "conteudo": [
+        "Os resultados do experimento demonstraram que o grupo que utilizou o sistema de recomendação baseado em IA apresentou melhoria de 23% no desempenho médio em relação ao grupo controle.",
+        "Estes resultados são consistentes com os achados de Johnson et al. (2023), que reportaram melhorias semelhantes em contextos educacionais adaptativos."
+      ]
+    },
+    {
+      "titulo": "Conclusão",
+      "nivel": 1,
+      "conteudo": [
+        "A pesquisa demonstrou que sistemas de IA podem contribuir significativamente para a personalização do aprendizado. Os resultados indicam que a adaptação de conteúdos ao perfil individual do estudante melhora o engajamento e o desempenho acadêmico.",
+        "Recomenda-se a realização de estudos longitudinais para avaliar os efeitos a longo prazo da personalização baseada em IA no processo educacional."
+      ]
+    }
+  ],
+  "referencias": [
+    {
+      "tipo": "livro",
+      "autores": ["RUSSELL, Stuart; NORVIG, Peter"],
+      "titulo": "Artificial Intelligence: A Modern Approach",
+      "edicao": "4",
+      "local": "Upper Saddle River",
+      "editora": "Pearson",
+      "ano": 2021
+    },
+    {
+      "tipo": "artigo_periodico",
+      "autores": ["CHEN, Li; CHEN, Wei"],
+      "titulo": "Personalized learning through AI: A systematic review",
+      "revista": "Computers & Education",
+      "volume": "180",
+      "paginas": "p. 1-18",
+      "ano": 2022,
+      "doi": "10.1016/j.compedu.2022.104"
+    },
+    {
+      "tipo": "artigo_periodico",
+      "autores": ["JOHNSON, Mark; SMITH, Ana; BROWN, David"],
+      "titulo": "Adaptive learning systems in higher education",
+      "revista": "Journal of Educational Technology",
+      "volume": "45",
+      "numero": "2",
+      "paginas": "p. 112-130",
+      "ano": 2023
+    },
+    {
+      "tipo": "artigo_periodico",
+      "autores": ["SILVA, Carlos"],
+      "titulo": "IA e o futuro da educação brasileira",
+      "revista": "Revista Brasileira de Tecnologia Educacional",
+      "volume": "12",
+      "numero": "1",
+      "paginas": "p. 45-62",
+      "ano": 2023
+    }
+  ]
+}

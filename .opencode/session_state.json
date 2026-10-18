@@ -1,0 +1,32 @@
+{
+  "project_name": "Formata-oABNT",
+  "version": "1.0",
+  "token_saving_mode": true,
+  "last_summary": "Fase 1 (Fundação) concluída: estrutura de pastas, pyproject.toml, core (config/models/engine/exceptions), formatter TCC, gerador DOCX+PDF, validador de estrutura, CLI Typer, exemplo JSON, README e BLUEPRINT.md. Repo GitHub vazio (sem commits remotos).",
+  "current_task": "Validar skills instaladas; próximo passo: salvar módulo PostgreSQL/SQLAlchemy (Fase 4) e fazer primeiro commit + push.",
+  "key_decisions": [
+    "Saída principal DOCX, PDF como opção",
+    "Interface inicial: Python local (desktop); nuvem depois",
+    "Tipos: TCC, artigo, dissertação, tese, relatório, projeto de pesquisa",
+    "Futuro backend: FastAPI + PostgreSQL",
+    "Repo: https://github.com/cassioreistech/Formata-oABNT.git"
+  ],
+  "pending_actions": [
+    "Criar src/db/ com SQLAlchemy (User, Document) — Fase 4",
+    "Primeiro commit e push para o GitHub",
+    "Criar formatters restantes (artigo, dissertacao, tese, relatorio, projeto_pesquisa)",
+    "Testes unitários"
+  ],
+  "recent_files": [
+    "BLUEPRINT.md",
+    "pyproject.toml",
+    "src/core/config.py",
+    "src/core/models.py",
+    "src/core/engine.py",
+    "src/generators/docx_generator.py",
+    "src/formatters/tcc.py",
+    "src/validators/structure.py",
+    "src/cli/app.py",
+    "examples/exemplo_tcc.json"
+  ]
+}
