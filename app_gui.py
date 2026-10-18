@@ -63,7 +63,7 @@ CORES = {
 # Campos do formulário de referências por tipo de fonte.
 CAMPOS_POR_TIPO: dict[str, list[tuple[str, str]]] = {
     "Livro": [
-        ("autor", "Autor (nome completo)"),
+        ("autor", "Autor(es) — nome completo"),
         ("titulo", "Título do livro"),
         ("edicao", "Edição (ex.: 2)"),
         ("cidade", "Cidade"),
@@ -71,7 +71,7 @@ CAMPOS_POR_TIPO: dict[str, list[tuple[str, str]]] = {
         ("ano", "Ano"),
     ],
     "Artigo": [
-        ("autor", "Autor (nome completo)"),
+        ("autor", "Autor(es) — nome completo"),
         ("titulo_artigo", "Título do artigo"),
         ("titulo_periodico", "Periódico / Revista"),
         ("cidade", "Cidade"),
@@ -81,8 +81,9 @@ CAMPOS_POR_TIPO: dict[str, list[tuple[str, str]]] = {
         ("ano", "Ano"),
     ],
     "Site": [
-        ("autor", "Autor (opcional)"),
+        ("autor", "Autor(es) — opcional"),
         ("titulo", "Título da página"),
+        ("site_nome", "Nome do site (opcional)"),
         ("url", "URL"),
         ("data_acesso", "Data de acesso (dd/mm/aaaa)"),
     ],
@@ -90,6 +91,9 @@ CAMPOS_POR_TIPO: dict[str, list[tuple[str, str]]] = {
         ("bruto", "Cole aqui o texto da referência"),
     ],
 }
+
+# Chave do formulário que usa o seletor dinâmico de vários autores.
+CHAVE_AUTORES = "autor"
 
 
 class AplicacaoABNT(_JanelaBase):
@@ -104,6 +108,10 @@ class AplicacaoABNT(_JanelaBase):
         self.formatador = ABNTReferenceFormatter()
         self.referencia_atual: Referencia | None = None
         self.campos_referencia: dict[str, ctk.CTkBaseClass] = {}
+        self.autores: list[str] = []
+        self.referencias_preparadas: list[Referencia] = []
+        self.campo_autor: ctk.CTkEntry | None = None
+        self.rotulo_autores: ctk.CTkLabel | None = None
 
         self.title("Formata-oABNT — Formatador de Documentos")
         self.geometry("860x700")
@@ -237,7 +245,7 @@ class AplicacaoABNT(_JanelaBase):
     def _montar_aba_referencias(self, pai: ctk.CTkFrame) -> None:
         """Aba do gerador de referências (NBR 6023)."""
         pai.grid_columnconfigure(0, weight=1)
-        pai.grid_rowconfigure(2, weight=1)
+        pai.grid_rowconfigure(3, weight=1)
 
         self.seletor_tipo = ctk.CTkSegmentedButton(
             pai,
@@ -253,7 +261,8 @@ class AplicacaoABNT(_JanelaBase):
         self._construir_campos("Livro")
 
         self._montar_previa(pai, linha=2)
-        self._montar_botoes_referencia(pai, linha=3)
+        self._montar_lista_preparo(pai, linha=3)
+        self._montar_botoes_referencia(pai, linha=4)
 
     def _montar_previa(self, pai: ctk.CTkFrame, linha: int) -> None:
         """Área de prévia da referência gerada."""
@@ -276,32 +285,92 @@ class AplicacaoABNT(_JanelaBase):
         self.previa = ctk.CTkTextbox(moldura, height=80, wrap="word")
         self.previa.grid(row=2, column=0, sticky="nsew", padx=10, pady=(4, 10))
 
+    def _montar_lista_preparo(self, pai: ctk.CTkFrame, linha: int) -> None:
+        """Lista das referências em preparo, antes de gravar no Word."""
+        moldura = ctk.CTkFrame(pai)
+        moldura.grid(row=linha, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        moldura.grid_columnconfigure(0, weight=1)
+        moldura.grid_rowconfigure(2, weight=1)
+
+        ctk.CTkLabel(
+            moldura,
+            text="Referências em preparo",
+            font=ctk.CTkFont(size=13, weight="bold"),
+        ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+
+        ctk.CTkLabel(
+            moldura,
+            text="Adicione quantas quiser e insira todas de uma vez no documento.",
+            text_color="gray",
+            font=ctk.CTkFont(size=11),
+        ).grid(row=1, column=0, sticky="w", padx=10)
+
+        self.lista_preparo = ctk.CTkTextbox(moldura, height=110, wrap="word")
+        self.lista_preparo.grid(row=2, column=0, sticky="nsew", padx=10, pady=(4, 4))
+        self.lista_preparo.configure(state="disabled")
+
+        controles = ctk.CTkFrame(moldura, fg_color="transparent")
+        controles.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
+        controles.grid_columnconfigure((0, 1), weight=1)
+
+        ctk.CTkButton(
+            controles,
+            text="Remover a última",
+            fg_color=CORES["cinza"],
+            hover_color=CORES["cinza_hover"],
+            command=self._remover_ultima_referencia,
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+
+        ctk.CTkButton(
+            controles,
+            text="Limpar lista",
+            fg_color=CORES["cinza"],
+            hover_color=CORES["cinza_hover"],
+            command=self._limpar_lista_preparo,
+        ).grid(row=0, column=1, sticky="ew", padx=(5, 0))
+
     def _montar_botoes_referencia(self, pai: ctk.CTkFrame, linha: int) -> None:
         """Botões de ação da aba de referências."""
         botoes = ctk.CTkFrame(pai, fg_color="transparent")
         botoes.grid(row=linha, column=0, sticky="ew", padx=10, pady=(0, 10))
-        for coluna in range(3):
+        for coluna in range(4):
             botoes.grid_columnconfigure(coluna, weight=1)
 
         ctk.CTkButton(
             botoes, text="Gerar Referência", command=self._gerar_referencia
-        ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 4))
 
         ctk.CTkButton(
             botoes,
-            text="Gerar e Copiar Referência",
+            text="Adicionar à Lista",
             fg_color=CORES["azul"],
             hover_color=CORES["azul_hover"],
-            command=self._gerar_e_copiar,
-        ).grid(row=0, column=1, sticky="ew", padx=5)
+            command=self._adicionar_a_lista,
+        ).grid(row=0, column=1, sticky="ew", padx=4)
 
         ctk.CTkButton(
             botoes,
-            text="Inserir na Seção de Referências do Word",
+            text="Copiar texto",
+            fg_color=CORES["cinza"],
+            hover_color=CORES["cinza_hover"],
+            command=self._gerar_e_copiar,
+        ).grid(row=0, column=2, sticky="ew", padx=4)
+
+        ctk.CTkButton(
+            botoes,
+            text="Inserir só esta no Word",
+            fg_color=CORES["cinza"],
+            hover_color=CORES["cinza_hover"],
+            command=self._inserir_no_word,
+        ).grid(row=0, column=3, sticky="ew", padx=(4, 0))
+
+        ctk.CTkButton(
+            pai,
+            text="Inserir Referências em Preparo no Documento Word",
             fg_color=CORES["verde"],
             hover_color=CORES["verde_hover"],
-            command=self._inserir_no_word,
-        ).grid(row=0, column=2, sticky="ew", padx=(5, 0))
+            command=self._inserir_lista_no_word,
+        ).grid(row=linha + 1, column=0, sticky="ew", padx=10, pady=(0, 6))
 
         ctk.CTkButton(
             pai,
@@ -309,7 +378,7 @@ class AplicacaoABNT(_JanelaBase):
             fg_color=CORES["cinza"],
             hover_color=CORES["cinza_hover"],
             command=self._ordenar_docx,
-        ).grid(row=linha + 1, column=0, sticky="ew", padx=10, pady=(0, 12))
+        ).grid(row=linha + 2, column=0, sticky="ew", padx=10, pady=(0, 12))
 
     # ── Formulário de referências ───────────────────────────────────────────
 
@@ -323,19 +392,99 @@ class AplicacaoABNT(_JanelaBase):
         for widget in self.moldura_campos.winfo_children():
             widget.destroy()
         self.campos_referencia = {}
+        self.campo_autor = None
+        self.rotulo_autores = None
 
         for indice, (chave, rotulo) in enumerate(CAMPOS_POR_TIPO.get(tipo, [])):
             ctk.CTkLabel(self.moldura_campos, text=rotulo, anchor="w").grid(
-                row=indice, column=0, sticky="w", padx=(8, 10), pady=4
+                row=indice, column=0, sticky="nw", padx=(8, 10), pady=4
             )
             if chave == "bruto":
                 widget: ctk.CTkBaseClass = ctk.CTkTextbox(
                     self.moldura_campos, height=90, wrap="word"
                 )
+                widget.grid(row=indice, column=1, sticky="ew", padx=(0, 8), pady=4)
+                self.campos_referencia[chave] = widget
+            elif chave == CHAVE_AUTORES:
+                self.campos_referencia[chave] = self._construir_campo_autores(
+                    indice, rotulo
+                )
             else:
                 widget = ctk.CTkEntry(self.moldura_campos, placeholder_text=rotulo)
-            widget.grid(row=indice, column=1, sticky="ew", padx=(0, 8), pady=4)
-            self.campos_referencia[chave] = widget
+                widget.grid(row=indice, column=1, sticky="ew", padx=(0, 8), pady=4)
+                self.campos_referencia[chave] = widget
+
+    def _construir_campo_autores(self, linha: int, rotulo: str) -> ctk.CTkEntry:
+        """Cria o seletor de vários autores: entrada + Adicionar + resumo."""
+        moldura = ctk.CTkFrame(self.moldura_campos, fg_color="transparent")
+        moldura.grid(row=linha, column=1, sticky="ew", padx=(0, 8), pady=4)
+        moldura.grid_columnconfigure(0, weight=1)
+
+        entrada = ctk.CTkEntry(moldura, placeholder_text=rotulo)
+        entrada.grid(row=0, column=0, sticky="ew")
+        entrada.bind("<Return>", lambda _evento: self._adicionar_autor())
+
+        ctk.CTkButton(moldura, text="Adicionar", width=90, command=self._adicionar_autor).grid(
+            row=0, column=1, padx=(5, 0)
+        )
+
+        self.rotulo_autores = ctk.CTkLabel(
+            moldura,
+            text="Nenhum autor adicionado",
+            anchor="w",
+            text_color="gray",
+            font=ctk.CTkFont(size=11),
+        )
+        self.rotulo_autores.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+
+        ctk.CTkButton(
+            moldura,
+            text="Limpar autores",
+            width=90,
+            fg_color=CORES["cinza"],
+            hover_color=CORES["cinza_hover"],
+            command=self._limpar_autores,
+        ).grid(row=2, column=0, sticky="w", pady=(4, 0))
+
+        self.campo_autor = entrada
+        self._renderizar_autores()
+        return entrada
+
+    def _adicionar_autor(self) -> None:
+        """Acrescenta o autor digitado à lista de autores."""
+        if self.campo_autor is None:
+            return
+        nome = self.campo_autor.get().strip()
+        if not nome:
+            return
+        self.autores.append(nome)
+        self.campo_autor.delete(0, "end")
+        self._renderizar_autores()
+
+    def _limpar_autores(self) -> None:
+        """Descarta todos os autores já adicionados."""
+        self.autores.clear()
+        if self.campo_autor is not None:
+            self.campo_autor.delete(0, "end")
+        self._renderizar_autores()
+
+    def _renderizar_autores(self) -> None:
+        """Resume quantos e quais autores já foram adicionados."""
+        if self.rotulo_autores is None:
+            return
+        if not self.autores:
+            self.rotulo_autores.configure(text="Nenhum autor adicionado")
+            return
+        self.rotulo_autores.configure(text=" • ".join(self.autores))
+
+    def _autores_do_formulario(self) -> list[str]:
+        """Junta os autores adicionados com o que ainda está digitado no campo."""
+        autores = list(self.autores)
+        if self.campo_autor is not None:
+            digitado = self.campo_autor.get().strip()
+            if digitado:
+                autores.append(digitado)
+        return autores
 
     def _ler_campo(self, chave: str) -> str:
         """Lê o valor de um campo do formulário."""
@@ -361,19 +510,19 @@ class AplicacaoABNT(_JanelaBase):
     def _montar_referencia(self) -> Referencia | None:
         """Constrói a referência a partir dos campos preenchidos."""
         tipo = self.seletor_tipo.get()
+        autores = self._autores_do_formulario()
 
         if tipo == "Livro":
             return self.formatador.format_book(
-                author=self._ler_campo("autor"),
                 title=self._ler_campo("titulo"),
                 edition=self._ler_campo("edicao"),
                 city=self._ler_campo("cidade"),
                 publisher=self._ler_campo("editora"),
                 year=self._ler_campo("ano") or None,
+                authors=autores,
             )
         if tipo == "Artigo":
             return self.formatador.format_journal_article(
-                author=self._ler_campo("autor"),
                 article_title=self._ler_campo("titulo_artigo"),
                 journal_title=self._ler_campo("titulo_periodico"),
                 city=self._ler_campo("cidade"),
@@ -381,13 +530,15 @@ class AplicacaoABNT(_JanelaBase):
                 number=self._ler_campo("numero"),
                 pages=self._ler_campo("paginas"),
                 year=self._ler_campo("ano") or None,
+                authors=autores,
             )
         if tipo == "Site":
             return self.formatador.format_website(
-                author=self._ler_campo("autor"),
                 title=self._ler_campo("titulo"),
                 url=self._ler_campo("url"),
                 access_date=self._ler_data_acesso(),
+                site_name=self._ler_campo("site_nome"),
+                authors=autores,
             )
 
         bruto = self._ler_campo("bruto")
@@ -455,6 +606,85 @@ class AplicacaoABNT(_JanelaBase):
 
         self._registrar_log(f"Referência inserida em: {destino}")
         messagebox.showinfo("Concluído", "Referência inserida e ordenada com sucesso.")
+
+    # ── Lista de referências em preparo ─────────────────────────────────────
+
+    def _adicionar_a_lista(self) -> None:
+        """Acrescenta a referência gerada à lista em preparo."""
+        referencia = self._gerar_referencia()
+        if referencia is None:
+            return
+
+        self.referencias_preparadas.append(referencia)
+        self._renderizar_lista_preparo()
+        self._registrar_log(
+            f"Referência adicionada à lista ({len(self.referencias_preparadas)} no total)."
+        )
+
+    def _remover_ultima_referencia(self) -> None:
+        """Remove a última referência da lista em preparo."""
+        if not self.referencias_preparadas:
+            return
+        self.referencias_preparadas.pop()
+        self._renderizar_lista_preparo()
+
+    def _limpar_lista_preparo(self) -> None:
+        """Esvazia a lista de referências em preparo."""
+        self.referencias_preparadas.clear()
+        self._renderizar_lista_preparo()
+
+    def _renderizar_lista_preparo(self) -> None:
+        """Mostra a lista em preparo, numerada na ordem de cadastro."""
+        self.lista_preparo.configure(state="normal")
+        self.lista_preparo.delete("1.0", "end")
+
+        if not self.referencias_preparadas:
+            self.lista_preparo.insert("1.0", "Nenhuma referência em preparo.")
+        else:
+            for indice, referencia in enumerate(self.referencias_preparadas, start=1):
+                self.lista_preparo.insert(
+                    "end", f"{indice}. {referencia.texto_markdown}\n\n"
+                )
+
+        self.lista_preparo.configure(state="disabled")
+
+    def _inserir_lista_no_word(self) -> None:
+        """Insere todas as referências em preparo na seção REFERÊNCIAS do Word."""
+        if not self.referencias_preparadas:
+            messagebox.showinfo(
+                "Lista vazia",
+                "Adicione ao menos uma referência à lista em preparo.",
+            )
+            return
+
+        destino = self._escolher_docx("Selecione o documento que receberá as referências")
+        if destino is None:
+            return
+
+        quantidade = len(self.referencias_preparadas)
+        if not messagebox.askyesno(
+            "Confirmar",
+            f"Inserir {quantidade} referência(s) em “{destino.name}”?\n\n"
+            "O arquivo será atualizado.",
+        ):
+            return
+
+        try:
+            documento = abrir(destino)
+            total = referencias.inserir_referencias(documento, self.referencias_preparadas)
+            salvar(documento, destino)
+        except Exception as erro:  # noqa: BLE001 - reportado ao usuário
+            messagebox.showerror("Falha ao inserir", str(erro))
+            return
+
+        self.abas.set("Formatar Documento")
+        self._registrar_log(
+            f"{total} referência(s) inserida(s) e ordenada(s) em: {destino}"
+        )
+        messagebox.showinfo(
+            "Concluído",
+            f"{total} referência(s) inserida(s) e ordenadas com sucesso.",
+        )
 
     def _ordenar_docx(self) -> None:
         """Reformata, reaplica o negrito e ordena as referências de um .docx."""

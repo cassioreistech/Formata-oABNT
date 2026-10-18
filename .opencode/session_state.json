@@ -1,44 +1,31 @@
 {
   "project_name": "Formata-oABNT",
-  "version": "1.0",
+  "version": "0.5.0",
   "token_saving_mode": true,
-  "last_summary": "Aplicacao desktop (GUI CustomTkinter) com 2 abas: 'Formatar Documento' (motor ABNT) e 'Referencias ABNT' (gerador NBR 6023). Novos arquivos: abnt_references.py (classe ABNTReferenceFormatter + Referencia/Segmento, livro/artigo/site, analisar_texto_bruto, sort_references) e formata_abnt/referencias.py (secao REFERENCIAS: garantir/inserir/ordenar/formatar). Motor ganhou etapa final de ordenacao de referencias. 76 testes pytest passando + smoke test real (motor, referencias e GUI 2 abas) OK.",
-  "current_task": "Modulo de referencias NBR 6023 + aba na GUI concluidos e publicados. Aguardando proxima etapa.",
+  "last_summary": "App desktop local (Python/CustomTkinter) que formata .docx nas normas ABNT. Refinamento NBR 6023 concluido: multiplos autores, mes 'maio', negrito no nome do site, lista de referencias em preparo com insercao em lote.",
+  "current_task": "Refinamento NBR 6023 (itens A+B+C+D) concluido e testado; aguardando definicao do proximo passo.",
   "key_decisions": [
-    "Aplicacao 100% local/offline desktop (Windows), Python 3.15",
-    "GUI com CustomTkinter (CTkTabview) + drag-and-drop opcional (tkinterdnd2)",
-    "abnt_references.py na raiz do projeto (nome pedido pelo usuario); integracao docx em formata_abnt/referencias.py",
-    "Referencia e composta por Segmento(texto, negrito) -> permite gravar negrito real no .docx",
-    "Referencia.texto_puro (copiar) e Referencia.texto_markdown (previa com **)",
-    "API do formatador mantem nomes em ingles (author/title/...) para compatibilidade com o snippet enviado",
-    "format_author_name aceita nome completo ('Joao da Silva' -> 'SILVA, Joao da') e autor ja invertido",
-    "analisar_texto_bruto usa heuristicas: URL -> site; v./n./p. -> artigo; 'Cidade: Editora, ano' -> livro; senao generico",
-    "Ordenacao alfabetica sem acentos (NFKD) e case-insensitive",
-    "Secao REFERENCIAS: titulo 'REFERENCIAS', itens alinhados a esquerda, espaco simples 1.0, negrito no titulo",
-    "ordenar_referencias reordena os elementos <w:p> no XML antes do sectPr (preserva formatacao)",
-    "Motor ABNT: etapa final 'formatar_secao_referencias' roda DEPOIS de tipografia para nao aplicar recuo de corpo",
-    "formatar_secao_referencias nao cria a secao (devolve 0 se ausente); garantir_secao_referencias sim",
-    "GUI: 'Inserir na Secao de Referencias do Word' pede confirmacao pois sobrescreve o arquivo escolhido"
+    "Nao criar a classe ABNTReferenceRefined: estender ABNTReferenceFormatter (evita dois motores concorrentes para a mesma tarefa).",
+    "Multiplos autores: ate 3 citados separados por '; '; acima de 3 apenas o primeiro + ' et al. ' (sem asteriscos, sem italico - a norma mostra texto simples).",
+    "MESES_ABNT[5] = 'maio' (a NBR 6023 nao abrevia maio) - era 'mai.'.",
+    "format_website ganhou site_name: quando informado, o NOME DO SITE recebe o negrito (titulo do conteiner). Sem autor e sem site, a 1a palavra do titulo fica em caixa alta e negrito.",
+    "_destaque_site: conta blocos separados por '. ' antes de 'Disponivel em:'; 3+ blocos => ultimo e o nome do site; 1 bloco => 1a palavra do titulo; 2 blocos => nada.",
+    "_destaque_artigo corrigido: isola o trecho apos o ULTIMO '. ' antes de remover a cidade (a virgula de 'SOBRENOME, Nome' de autores multiplos era confundida com o separador da cidade).",
+    "API dos formatadores mantem os nomes em ingles e o parametro author (compatibilidade); o novo parametro authors (lista) tem precedencia quando informado.",
+    "Novo inserir_referencias(documento, referencias) em formata_abnt/referencias.py: grava o lote e ordena uma unica vez.",
+    "GUI: campo de autores com botao Adicionar (e Enter) + resumo; lista 'Referencias em preparo' (CTkTextbox somente leitura) com Remover a ultima e Limpar lista.",
+    "Itens descartados do pedido original: 'Extrair Dados da URL' (exigiria rede, quebra o offline-first) e a classe ABNTReferenceRefined (continha bugs: artigos sumiam, '*et al.*' literal, secao REFERENCIAS duplicada, titulo a esquerda, ordenacao sem tratar acentos)."
   ],
   "pending_actions": [
-    "Definir proxima etapa com o usuario",
-    "Possiveis melhorias: numeracao de paginas, capa/folha de rosto",
-    "Possivel: rodar build_exe.py para gerar dist/FormataABNT.exe",
-    "Possivel: reformatar negrito de referencias ja existentes (hoje so ordena/formata, nao reanalisa o texto)"
+    "Aguardando escolha do proximo passo: numeracao de paginas, capa/folha de rosto, sumario automatico, ou rodar build_exe.py para gerar dist/FormataABNT.exe."
   ],
   "recent_files": [
     "abnt_references.py",
     "formata_abnt/referencias.py",
     "app_gui.py",
-    "abnt_engine.py",
-    "formata_abnt/normas.py",
-    "formata_abnt/tipografia.py",
-    "formata_abnt/citacao_longa.py",
-    "formata_abnt/estilos.py",
     "tests/test_abnt_references.py",
     "tests/test_referencias_docx.py",
     "tests/test_app_gui.py",
-    "README.md",
-    "pyproject.toml"
+    "README.md"
   ]
 }

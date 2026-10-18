@@ -27,6 +27,7 @@ def test_campos_do_formulario_por_tipo() -> None:
     """Cada tipo de referência tem seus campos de formulário definidos."""
     assert set(app_gui.CAMPOS_POR_TIPO) == {"Livro", "Artigo", "Site", "Texto bruto"}
     assert ("url", "URL") in app_gui.CAMPOS_POR_TIPO["Site"]
+    assert ("site_nome", "Nome do site (opcional)") in app_gui.CAMPOS_POR_TIPO["Site"]
     assert ("bruto", "Cole aqui o texto da referência") in app_gui.CAMPOS_POR_TIPO[
         "Texto bruto"
     ]
@@ -40,5 +41,14 @@ def test_metodos_da_aba_de_referencias_existem() -> None:
         "_gerar_e_copiar",
         "_inserir_no_word",
         "_ordenar_docx",
+        "_adicionar_a_lista",
+        "_remover_ultima_referencia",
+        "_limpar_lista_preparo",
+        "_renderizar_lista_preparo",
+        "_inserir_lista_no_word",
+        "_adicionar_autor",
+        "_limpar_autores",
+        "_renderizar_autores",
+        "_autores_do_formulario",
     ):
         assert callable(getattr(app_gui.AplicacaoABNT, metodo))

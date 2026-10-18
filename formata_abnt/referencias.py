@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import re
 import unicodedata
+from collections.abc import Iterable
 
 from docx.document import Document as DocumentoDocx
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -218,6 +219,27 @@ def inserir_referencia(
     if ordenar:
         ordenar_referencias(documento)
     return paragrafo
+
+
+def inserir_referencias(
+    documento: DocumentoDocx,
+    referencias: Iterable[Referencia],
+    normas: NormasABNT = PADRAO,
+) -> int:
+    """Insere várias referências de uma vez e ordena só uma vez no final.
+
+    Usado pela lista de referências em preparo da interface gráfica.
+    """
+    pendentes = [referencia for referencia in referencias if referencia.segmentos]
+    if not pendentes:
+        return 0
+
+    garantir_secao_referencias(documento)
+    for referencia in pendentes:
+        escrever_referencia(documento.add_paragraph(), referencia, normas)
+
+    ordenar_referencias(documento)
+    return len(pendentes)
 
 
 def formatar_secao_referencias(

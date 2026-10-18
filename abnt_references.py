@@ -15,12 +15,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 # Abreviações de mês usadas no "Acesso em:" (NBR 6023).
+# Observação: "maio" não é abreviado pela norma.
 MESES_ABNT = {
     1: "jan.",
     2: "fev.",
     3: "mar.",
     4: "abr.",
-    5: "mai.",
+    5: "maio",
     6: "jun.",
     7: "jul.",
     8: "ago.",
@@ -144,10 +145,35 @@ class ABNTReferenceFormatter:
         )
 
     @staticmethod
-    def _segmento_autor(author: str) -> list[Segmento]:
-        """Monta o trecho inicial com o autor, quando existir."""
-        autor = ABNTReferenceFormatter.format_author_name(author)
-        return [Segmento(f"{autor}. ")] if autor else []
+    def format_authors(authors: Iterable[str] | None = None) -> str:
+        """Formata 1, 2, 3 ou mais de 3 autores conforme a NBR 6023.
+
+        Até três autores todos são indicados, separados por ponto e vírgula.
+        Com mais de três, indica-se apenas o primeiro seguido de ``et al.``.
+        Nomes já invertidos (``SILVA, João``) são aceitos sem alteração.
+        """
+        lista = [autor for autor in (authors or []) if (autor or "").strip()]
+        formatados = [
+            nome
+            for nome in (
+                ABNTReferenceFormatter.format_author_name(autor) for autor in lista
+            )
+            if nome
+        ]
+        if not formatados:
+            return ""
+        if len(formatados) <= 3:
+            return "; ".join(formatados) + ". "
+        return f"{formatados[0]} et al. "
+
+    @staticmethod
+    def _segmento_autor(
+        author: str = "", authors: Iterable[str] | None = None
+    ) -> list[Segmento]:
+        """Monta o trecho inicial com o(s) autor(es), quando existir(em)."""
+        lista = list(authors) if authors else ([author] if author else [])
+        texto = ABNTReferenceFormatter.format_authors(lista)
+        return [Segmento(texto)] if texto else []
 
     # ── Formatadores por tipo ───────────────────────────────────────────────
 
@@ -157,21 +183,35 @@ class ABNTReferenceFormatter:
         title: str = "",
         url: str = "",
         access_date: datetime | None = None,
+        site_name: str = "",
+        authors: Iterable[str] | None = None,
     ) -> Referencia:
-        """Formata referência de site/página web."""
-        segmentos = self._segmento_autor(author)
-        titulo = (title or "").strip().rstrip(".")
+        """Formata referência de site/página web.
 
-        if titulo:
-            if not segmentos:
-                # Sem autor, a primeira palavra do título fica em caixa alta e negrito.
+        Quando ``site_name`` é informado, o nome do site recebe o negrito — ele
+        é o "título" do contêiner, como o periódico em um artigo. Sem autor e
+        sem nome de site, a primeira palavra do título fica em caixa alta e em
+        negrito, ocupando a posição do autor.
+        """
+        segmentos = self._segmento_autor(author, authors)
+        titulo = (title or "").strip().rstrip(".")
+        site = (site_name or "").strip().rstrip(".")
+
+        if site:
+            if titulo:
+                segmentos.append(Segmento(f"{titulo}. "))
+            segmentos.append(Segmento(site, negrito=True))
+            segmentos.append(Segmento(". "))
+        elif titulo:
+            if segmentos:
+                segmentos.append(Segmento(f"{titulo}. "))
+            else:
+                # Sem autor, o título ocupa a posição do autor.
                 palavras = titulo.split()
                 segmentos.append(Segmento(palavras[0].upper(), negrito=True))
                 resto = " ".join(palavras[1:])
                 segmentos.append(Segmento(f" {resto}" if resto else ""))
                 segmentos.append(Segmento(". "))
-            else:
-                segmentos.append(Segmento(f"{titulo}. "))
 
         if url:
             segmentos.append(Segmento(f"Disponível em: <{url.strip()}>. "))
@@ -186,9 +226,10 @@ class ABNTReferenceFormatter:
         city: str = "",
         publisher: str = "",
         year: int | str | None = None,
+        authors: Iterable[str] | None = None,
     ) -> Referencia:
         """Formata referência de livro impresso ou digital."""
-        segmentos = self._segmento_autor(author)
+        segmentos = self._segmento_autor(author, authors)
 
         titulo = (title or "").strip().rstrip(".")
         if titulo:
@@ -221,9 +262,10 @@ class ABNTReferenceFormatter:
         number: str = "",
         pages: str = "",
         year: int | str | None = None,
+        authors: Iterable[str] | None = None,
     ) -> Referencia:
         """Formata referência de artigo em revista/periódico acadêmico."""
-        segmentos = self._segmento_autor(author)
+        segmentos = self._segmento_autor(author, authors)
 
         titulo = (article_title or "").strip().rstrip(".")
         if titulo:
@@ -325,7 +367,13 @@ class ABNTReferenceFormatter:
 
     @staticmethod
     def _destaque_artigo(texto: str) -> tuple[int, int] | None:
-        """Destaca o título do periódico (entre o artigo e ``Cidade, v.``)."""
+        """Destaca o título do periódico (entre o artigo e ``Cidade, v.``).
+
+        O título do periódico vem depois do último ponto (que fecha o título do
+        artigo) e antes da cidade, último trecho separado por vírgula. Isolar o
+        trecho após o ponto evita confundir a vírgula de ``SOBRENOME, Nome`` de
+        autores múltiplos com o separador da cidade.
+        """
         corte = len(texto)
         for encontrado in (
             _VOLUME_RE.search(texto),
@@ -336,33 +384,51 @@ class ABNTReferenceFormatter:
                 corte = min(corte, encontrado.start())
 
         cabeca = texto[:corte].rstrip(" .,;:")
-        ultima_virgula = cabeca.rfind(",")
-        if ultima_virgula != -1:
-            cabeca = cabeca[:ultima_virgula]
-
         posicao = cabeca.rfind(". ")
         inicio = posicao + 2 if posicao != -1 else 0
-        return ajustar_intervalo(texto, inicio, len(cabeca))
+
+        periodico = cabeca[inicio:]
+        virgula = periodico.rfind(",")
+        if virgula != -1:
+            periodico = periodico[:virgula]
+
+        return ajustar_intervalo(texto, inicio, inicio + len(periodico))
 
     @staticmethod
     def _destaque_site(texto: str) -> tuple[int, int] | None:
-        """Destaca a primeira palavra do título quando o site não tem autor.
+        """Destaca o nome do site; sem ele e sem autor, a 1ª palavra do título.
 
-        Um site com autor (``AUTOR. Título. Disponível em: ...``) não recebe
-        negrito, seguindo a regra adotada pelo formatador.
+        Regras adotadas (NBR 6023):
+
+        * ``AUTOR. Título. Nome do site. Disponível em: ...`` → destaca o nome
+          do site (o "título" do contêiner);
+        * ``Título. Disponível em: ...`` (sem autor) → a primeira palavra fica em
+          caixa alta e em negrito, ocupando a posição do autor;
+        * ``AUTOR. Título. Disponível em: ...`` → nada a destacar.
         """
         rotulo = _DISPONIVEL_RE.search(texto)
         antes = texto[: rotulo.start()] if rotulo else texto
         cabeca = antes.rstrip(" .,;:<")
-
-        if not cabeca or ". " in cabeca:
+        if not cabeca:
             return None
 
-        sem_espaco = texto.lstrip()
-        if not sem_espaco:
-            return None
-        inicio = len(texto) - len(sem_espaco)
-        return ajustar_intervalo(texto, inicio, inicio + len(sem_espaco.split()[0]))
+        blocos = [bloco for bloco in (parte.strip() for parte in cabeca.split(". ")) if bloco]
+
+        if len(blocos) >= 3:
+            nome_site = blocos[-1]
+            inicio = texto.rfind(nome_site, 0, len(cabeca))
+            if inicio == -1:
+                return None
+            return ajustar_intervalo(texto, inicio, inicio + len(nome_site))
+
+        if len(blocos) == 1:
+            sem_espaco = texto.lstrip()
+            if not sem_espaco:
+                return None
+            inicio = len(texto) - len(sem_espaco)
+            return ajustar_intervalo(texto, inicio, inicio + len(sem_espaco.split()[0]))
+
+        return None
 
     @staticmethod
     def _separar_autor(texto: str) -> tuple[str, str]:

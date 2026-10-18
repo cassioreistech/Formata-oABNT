@@ -10,9 +10,11 @@ ABNT. Roda 100% local, sem internet, sem servidor e sem Docker.
 - **NBR 10520** — aplica o estilo `ABNT_CitacaoLonga` (recuo 4 cm, 10 pt, espaço simples)
   a citações diretas com mais de 3 linhas.
 - **NBR 6024** — identifica a hierarquia de títulos (`1. INTRODUÇÃO`, `1.1 Objetivos`).
-- **NBR 6023** — gerador de referências (livro, artigo de periódico e site), com
-  destaque em negrito real, **reanálise automática do negrito** em referências já
-  existentes e ordenação alfabética automática na seção REFERÊNCIAS.
+- **NBR 6023** — gerador de referências (livro, artigo de periódico e site) com
+  **múltiplos autores** (até três citados; acima disso *et al.*), destaque em
+  negrito real, **reanálise automática do negrito** em referências já existentes,
+  lista de referências em preparo com inserção em lote e ordenação alfabética
+  automática na seção REFERÊNCIAS.
 - **Sanitização** — remove espaços invisíveis, espaços repetidos, quebras duplas e
   artefatos de cópia da web/PDF.
 - **Preservação de marcações** — negrito, itálico e sublinhado do texto são mantidos.
@@ -46,15 +48,23 @@ python app_gui.py
 
 1. Escolha o tipo: **Livro**, **Artigo**, **Site** ou **Texto bruto**.
 2. Preencha os campos (ou cole a referência já escrita na opção "Texto bruto").
-3. **Gerar Referência** mostra a prévia; **Gerar e Copiar Referência** envia o texto
+   - **Autores** — digite e clique em **Adicionar** (ou pressione Enter) para
+     incluir quantos quiser: até três autores todos são citados; acima disso a
+     norma pede apenas o primeiro seguido de *et al.*
+   - **Nome do site** (opcional) — quando informado, é o nome do site que recebe
+     o negrito, como o título do periódico em um artigo.
+3. **Gerar Referência** mostra a prévia; **Copiar texto** envia o texto simples
    para a área de transferência.
-4. **Inserir na Seção de Referências do Word** insere o item em um `.docx`,
-   criando a seção `REFERÊNCIAS` se necessário.
-5. **Reformatar, realçar o negrito e ordenar as referências de um .docx** analisa
+4. **Adicionar à Lista** acumula a referência em **Referências em preparo**, onde
+   você revisa, remove a última ou limpa tudo.
+5. **Inserir Referências em Preparo no Documento Word** grava o lote inteiro de
+   uma vez na seção `REFERÊNCIAS`, criando-a se necessário e ordenando
+   alfabeticamente. **Inserir só esta no Word** insere apenas a referência atual.
+6. **Reformatar, realçar o negrito e ordenar as referências de um .docx** analisa
    cada referência já escrita, **reaplica o negrito no trecho correto** (título do
-   livro, título do periódico ou primeira palavra do site sem autor) e reorganiza
-   a seção inteira em ordem alfabética. O texto não é alterado: apenas o destaque
-   em negrito é reposicionado.
+   livro, título do periódico, nome do site ou primeira palavra do site sem autor)
+   e reorganiza a seção inteira em ordem alfabética. O texto não é alterado: apenas
+   o destaque em negrito é reposicionado.
 
 > O motor de formatação também executa essa reanálise automaticamente ao processar
 > o documento — a seção REFERÊNCIAS sai corrigida, realçada e ordenada.

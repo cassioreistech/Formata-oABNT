@@ -19,6 +19,8 @@ from formata_abnt.referencias import (
     formatar_secao_referencias,
     garantir_secao_referencias,
     inserir_referencia,
+    inserir_referencias,
+    normalizar,
     ordenar_referencias,
     paragrafos_da_secao,
     realcar_referencia,
@@ -290,3 +292,42 @@ def test_realce_persiste_apos_salvar_e_reabrir(tmp_path: Path) -> None:
         "DINIZ, Maria Helena. Curso de Direito Civil. 38 ed. São Paulo: Saraiva, 2022."
     )
     assert [run.text for run in item.runs if run.bold] == ["Curso de Direito Civil"]
+
+
+# ── Inserção em lote (lista em preparo) ─────────────────────────────────────
+
+
+def test_inserir_referencias_em_lote_ordena_uma_vez() -> None:
+    """A inserção em lote grava todas as referências já ordenadas."""
+    documento = Document()
+    lote = [
+        _livro("Zélia Zebra", "Zeta"),
+        _livro("Ana Alves", "Alfa"),
+        _livro("Mário Moura", "Mu"),
+    ]
+
+    total = inserir_referencias(documento, lote)
+
+    assert total == 3
+    itens = paragrafos_da_secao(documento)
+    assert [item.text.split(".")[0] for item in itens] == ["ALVES, Ana", "MOURA, Mário", "ZEBRA, Zélia"]
+
+
+def test_inserir_referencias_em_lote_ignora_vazias() -> None:
+    """Referências sem segmentos não entram na seção."""
+    documento = Document()
+
+    assert inserir_referencias(documento, [Referencia([], tipo="generico")]) == 0
+
+
+def test_inserir_referencias_em_lote_cria_secao_uma_vez() -> None:
+    """A seção REFERÊNCIAS é criada apenas uma vez para o lote inteiro."""
+    documento = Document()
+    for titulo in ("Alfa", "Beta", "Gama"):
+        inserir_referencias(documento, [_livro("Ana Alves", titulo)])
+
+    titulos = [
+        p.text for p in documento.paragraphs if normalizar(p.text) == normalizar(NOME_SECAO)
+    ]
+    assert len(titulos) == 1
+    assert len(paragrafos_da_secao(documento)) == 3
