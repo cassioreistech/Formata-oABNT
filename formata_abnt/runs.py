@@ -1,4 +1,4 @@
-"""Definição de propriedades de fonte em runs do Word."""
+"""Aplicação de fonte e tamanho a runs, preservando marcações de texto."""
 
 from __future__ import annotations
 
@@ -11,7 +11,14 @@ ATRIBUTOS_FONTE = ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia")
 
 
 def definir_fonte(run: Run, nome: str, tamanho_pt: int) -> None:
-    """Aplica nome e tamanho de fonte a um run, cobrindo todos os alfabetos."""
+    """Define apenas nome e tamanho da fonte.
+
+    Negrito, itálico e sublinhado do run são preservados; textos vazios
+    são ignorados para não criar formatação órfã.
+    """
+    if not run.text:
+        return
+
     run.font.name = nome
     run.font.size = Pt(tamanho_pt)
 

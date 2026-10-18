@@ -4,22 +4,24 @@ build-backend = "hatchling.build"
 
 [project]
 name = "formata-abnt"
-version = "0.1.0"
-description = "Lê e reformata documentos .docx segundo as normas ABNT (NBR 14724)"
+version = "0.2.0"
+description = "Aplicação desktop que formata documentos .docx nas normas ABNT"
 requires-python = ">=3.11"
 dependencies = [
     "python-docx>=1.1.0",
+    "customtkinter>=5.2.0",
+    "tkinterdnd2>=0.4.0",
 ]
 
 [project.optional-dependencies]
+build = [
+    "pyinstaller>=6.0",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1.0",
 ]
-
-[project.scripts]
-formata-abnt = "formata_abnt.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["formata_abnt"]

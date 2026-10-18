@@ -1,3 +1,4 @@
-"""Formata-oABNT — reformatação de documentos .docx segundo as normas ABNT."""
+"""Formata-oABNT — motor ABNT e interface desktop para formatar .docx."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
+__all__ = ["__version__"]

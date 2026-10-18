@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+*.spec
 
 # Ambientes virtuais
 .venv/
@@ -20,6 +21,7 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Saídas geradas
+# Executáveis e saídas geradas
+*.exe
 saida/
 *_abnt.docx

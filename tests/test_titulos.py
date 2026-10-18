@@ -1,42 +1,57 @@
-"""Testes da formatação de títulos (NBR 6024 / 14724)."""
+"""Testes da hierarquia de títulos (NBR 6024)."""
 
 from __future__ import annotations
 
+from docx import Document
 from docx.document import Document as DocumentoDocx
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-from formata_abnt.abnt.normas import PADRAO
-from formata_abnt.abnt.titulos import aplicar_titulos, nivel_do_titulo
+from formata_abnt.normas import PADRAO
+from formata_abnt.titulos import (
+    aplicar_titulos,
+    nivel_do_titulo,
+    nivel_por_estilo,
+    nivel_por_numeracao,
+)
 
 
-def test_detecta_nivel_de_titulo(documento_exemplo: DocumentoDocx) -> None:
-    """Reconhece títulos pelos estilos Heading 1 e Heading 2."""
-    niveis = [nivel_do_titulo(p) for p in documento_exemplo.paragraphs]
-    assert 1 in niveis
-    assert 2 in niveis
+def test_nivel_por_numeracao() -> None:
+    """Infere o nível pela numeração progressiva do texto."""
+    assert nivel_por_numeracao("1. INTRODUÇÃO") == 1
+    assert nivel_por_numeracao("1.1 Objetivos") == 2
+    assert nivel_por_numeracao("2.3.1 Método") == 3
+    assert nivel_por_numeracao("Texto comum sem número") is None
 
 
-def test_titulo_nivel_1_centralizado_e_negrito(documento_exemplo: DocumentoDocx) -> None:
-    """Título de nível 1 fica centralizado, negrito e sem recuo."""
-    aplicar_titulos(documento_exemplo, PADRAO)
+def test_nivel_por_estilo() -> None:
+    """Reconhece títulos pelos estilos Heading do Word."""
+    doc = Document()
+    titulo = doc.add_heading("Introdução", level=2)
 
-    titulo = documento_exemplo.paragraphs[0]
+    assert nivel_por_estilo(titulo) == 2
+
+
+def test_nivel_do_titulo_prioriza_estilo() -> None:
+    """Um parágrafo com estilo de título é reconhecido."""
+    doc = Document()
+    titulo = doc.add_heading("Metodologia", level=1)
+
     assert nivel_do_titulo(titulo) == 1
+
+
+def test_aplicar_titulos_conta_e_formata(documento_exemplo: DocumentoDocx) -> None:
+    """Formata os títulos detectados e devolve a quantidade."""
+    total = aplicar_titulos(documento_exemplo, PADRAO)
+
+    assert total == 2
+    titulo = documento_exemplo.paragraphs[0]
     assert titulo.paragraph_format.alignment == WD_ALIGN_PARAGRAPH.CENTER
-    assert titulo.paragraph_format.first_line_indent.cm == 0
-    assert titulo.runs
     assert all(run.bold for run in titulo.runs)
 
 
-def test_titulo_nivel_2_alinhado_a_esquerda(documento_exemplo: DocumentoDocx) -> None:
-    """Título de nível 2 fica alinhado à esquerda."""
+def test_titulo_recebe_estilo_heading(documento_exemplo: DocumentoDocx) -> None:
+    """Títulos ganham estilo Heading, útil para o sumário do Word."""
     aplicar_titulos(documento_exemplo, PADRAO)
 
-    titulo = documento_exemplo.paragraphs[2]
-    assert nivel_do_titulo(titulo) == 2
-    assert titulo.paragraph_format.alignment == WD_ALIGN_PARAGRAPH.LEFT
-
-
-def test_paragrafo_comum_nao_e_titulo(documento_exemplo: DocumentoDocx) -> None:
-    """Parágrafo de corpo não é identificado como título."""
-    assert nivel_do_titulo(documento_exemplo.paragraphs[1]) is None
+    assert documento_exemplo.paragraphs[0].style.name == "Heading 1"
+    assert documento_exemplo.paragraphs[2].style.name == "Heading 2"

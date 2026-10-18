@@ -1,0 +1,84 @@
+"""Testes de ponta a ponta do motor ABNT."""
+
+from __future__ import annotations
+
+import pytest
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from pathlib import Path
+
+from abnt_engine import MotorABNT, formatar_para_abnt
+from formata_abnt.docx_io import abrir
+from formata_abnt.normas import PADRAO
+from tests.conftest import CITACAO_LONGA
+
+
+@pytest.fixture
+def arquivo_sujo(tmp_path: Path) -> Path:
+    """Arquivo .docx com títulos, citação longa e sujeira de cópia."""
+    doc = Document()
+    doc.add_paragraph("1. INTRODUÇÃO")
+    doc.add_paragraph("Texto com  espaços\u00a0irregulares e artefatos.")
+    doc.add_paragraph("")
+    doc.add_paragraph("")
+    doc.add_paragraph(CITACAO_LONGA)
+    doc.add_paragraph("Conclusão do trabalho acadêmico.")
+    destino = tmp_path / "sujo.docx"
+    doc.save(str(destino))
+    return destino
+
+
+def test_processar_gera_arquivo(arquivo_sujo: Path, tmp_path: Path) -> None:
+    """O pipeline gera o arquivo de saída."""
+    destino = tmp_path / "limpo_abnt.docx"
+
+    resultado = formatar_para_abnt(arquivo_sujo, destino)
+
+    assert resultado.arquivo_saida == destino
+    assert destino.exists()
+
+
+def test_processar_aplica_regras(arquivo_sujo: Path, tmp_path: Path) -> None:
+    """Títulos, citações e sanitização são contabilizados."""
+    resultado = MotorABNT().processar(arquivo_sujo, tmp_path / "saida.docx")
+
+    assert resultado.titulos_aplicados >= 1
+    assert resultado.citacoes_aplicadas == 1
+    assert resultado.paragrafos_removidos >= 1
+    assert resultado.runs_sanitizados >= 1
+
+
+def test_resultado_persiste_apos_reabrir(arquivo_sujo: Path, tmp_path: Path) -> None:
+    """As regras permanecem após salvar e reabrir o documento."""
+    destino = tmp_path / "saida.docx"
+    formatar_para_abnt(arquivo_sujo, destino)
+
+    reaberto = abrir(destino)
+    secao = reaberto.sections[0]
+    assert secao.left_margin.cm == pytest.approx(3.0, abs=0.01)
+    assert secao.top_margin.cm == pytest.approx(3.0, abs=0.01)
+
+    corpo = reaberto.paragraphs[1]
+    assert corpo.paragraph_format.line_spacing == 1.5
+    assert corpo.paragraph_format.alignment == WD_ALIGN_PARAGRAPH.JUSTIFY
+    assert corpo.runs[0].font.name == PADRAO.fonte_corpo
+
+
+def test_notifica_progresso(arquivo_sujo: Path, tmp_path: Path) -> None:
+    """O callback de progresso recebe as etapas do pipeline."""
+    mensagens: list[str] = []
+
+    MotorABNT().processar(
+        arquivo_sujo, tmp_path / "saida.docx", progresso=mensagens.append
+    )
+
+    assert mensagens[0] == "Lendo documento..."
+    assert mensagens[-1] == "Concluído!"
+    assert any("margens" in m.lower() for m in mensagens)
+
+
+def test_nome_de_saida_automatico(arquivo_sujo: Path) -> None:
+    """Sem saída informada, o arquivo recebe o sufixo _abnt."""
+    resultado = MotorABNT().processar(arquivo_sujo)
+
+    assert resultado.arquivo_saida.name == "sujo_abnt.docx"

@@ -1,16 +1,18 @@
-"""Aplicação das margens da NBR 14724."""
+"""Aplicação de papel A4 e margens ABNT (NBR 14724)."""
 
 from __future__ import annotations
 
 from docx.document import Document as DocumentoDocx
 from docx.shared import Cm
 
-from formata_abnt.abnt.normas import NormasABNT
+from formata_abnt.normas import NormasABNT
 
 
 def aplicar_margens(documento: DocumentoDocx, normas: NormasABNT) -> None:
-    """Ajusta as margens de todas as seções do documento."""
+    """Define papel A4 e as margens ABNT em todas as seções."""
     for secao in documento.sections:
+        secao.page_width = Cm(normas.largura_papel_cm)
+        secao.page_height = Cm(normas.altura_papel_cm)
         secao.top_margin = Cm(normas.margem_superior_cm)
         secao.bottom_margin = Cm(normas.margem_inferior_cm)
         secao.left_margin = Cm(normas.margem_esquerda_cm)
