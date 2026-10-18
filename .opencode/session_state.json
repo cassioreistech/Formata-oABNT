@@ -2,31 +2,43 @@
   "project_name": "Formata-oABNT",
   "version": "1.0",
   "token_saving_mode": true,
-  "last_summary": "Fase 1 (Fundação) concluída: estrutura de pastas, pyproject.toml, core (config/models/engine/exceptions), formatter TCC, gerador DOCX+PDF, validador de estrutura, CLI Typer, exemplo JSON, README e BLUEPRINT.md. Repo GitHub vazio (sem commits remotos).",
-  "current_task": "Validar skills instaladas; próximo passo: salvar módulo PostgreSQL/SQLAlchemy (Fase 4) e fazer primeiro commit + push.",
+  "last_summary": "Projeto reiniciado do zero. Primeiro entregavel pronto: le um .docx real, aplica NBR 14724 (margens 3/2/3/2, Times New Roman 12, espacamento 1.5, justificado, recuo 1.25, titulos por nivel) e salva. 14 testes pytest passando + smoke test da CLI OK.",
+  "current_task": "Primeiro passo concluido (reformatacao de .docx real). Aguardando definir o proximo passo.",
   "key_decisions": [
-    "Saída principal DOCX, PDF como opção",
-    "Interface inicial: Python local (desktop); nuvem depois",
-    "Tipos: TCC, artigo, dissertação, tese, relatório, projeto de pesquisa",
-    "Futuro backend: FastAPI + PostgreSQL",
-    "Repo: https://github.com/cassioreistech/Formata-oABNT.git"
+    "SaaS Python: formata/reformata .docx (NBR 14724, 10520, 6023) para estudantes e pesquisadores",
+    "Stack alvo: Python, python-docx, FastAPI, SQLAlchemy 2.x, PostgreSQL, Alembic, pytest",
+    "Planos Free e Premium com creditos de formatacao por usuario",
+    "Regras: modular (1 responsabilidade por arquivo), type hints + docstrings PT, testes pytest por modulo, nao alterar fora do escopo da etapa",
+    "Reinicio do zero: codigo anterior (Fase 1 + persistencia) descartado",
+    "Escopo do 1o passo: apenas NBR 14724 (layout); 10520 e 6023 ficam para etapas futuras",
+    "Nao modificar o conteudo do texto do usuario, apenas formatacao"
   ],
   "pending_actions": [
-    "Criar src/db/ com SQLAlchemy (User, Document) — Fase 4",
-    "Primeiro commit e push para o GitHub",
-    "Criar formatters restantes (artigo, dissertacao, tese, relatorio, projeto_pesquisa)",
-    "Testes unitários"
+    "Definir proximo passo com o usuario",
+    "Etapa futura: citacoes longas (NBR 10520)",
+    "Etapa futura: referencias (NBR 6023)",
+    "Etapa futura: numeracao de paginas no cabecalho/rodape",
+    "Etapa futura: servico de creditos + planos Free/Premium",
+    "Etapa futura: API FastAPI",
+    "Push do reinicio para o GitHub (remote ja configurado)"
   ],
   "recent_files": [
-    "BLUEPRINT.md",
+    "formata_abnt/abnt/normas.py",
+    "formata_abnt/abnt/runs.py",
+    "formata_abnt/abnt/margens.py",
+    "formata_abnt/abnt/fontes.py",
+    "formata_abnt/abnt/paragrafos.py",
+    "formata_abnt/abnt/titulos.py",
+    "formata_abnt/abnt/reformatador.py",
+    "formata_abnt/docx_io.py",
+    "formata_abnt/cli.py",
+    "tests/conftest.py",
+    "tests/test_margens.py",
+    "tests/test_fontes.py",
+    "tests/test_paragrafos.py",
+    "tests/test_titulos.py",
+    "tests/test_reformatador.py",
     "pyproject.toml",
-    "src/core/config.py",
-    "src/core/models.py",
-    "src/core/engine.py",
-    "src/generators/docx_generator.py",
-    "src/formatters/tcc.py",
-    "src/validators/structure.py",
-    "src/cli/app.py",
-    "examples/exemplo_tcc.json"
+    "README.md"
   ]
 }

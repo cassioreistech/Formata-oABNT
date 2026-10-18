@@ -1,126 +1,68 @@
-# 🎓 Formata-oABNT
+# Formata-oABNT
 
-Sistema premium de formatação automática de documentos acadêmicos conforme as normas ABNT.
+Lê um arquivo `.docx` existente, reaplica a formatação da **NBR 14724**
+(margens, fonte, espaçamento, alinhamento e títulos) e salva o resultado.
 
-## ✨ Funcionalidades
-
-- **Formatação automática** conforme NBR 14724, 6023, 6024, 6027, 6028, 10520
-- **Tipos de documento**: TCC, Artigo, Dissertação, Tese, Relatório, Projeto de Pesquisa
-- **Saída em DOCX** (principal) e PDF
-- **Validação de conformidade** antes de gerar
-- **CLI interativa** com Rich
-- **Modelos prontos** para preenchimento rápido
-
-## 🚀 Instalação
+## Instalação
 
 ```bash
-# Clone o repositório
-git clone https://github.com/cassioreistech/Formata-oABNT.git
-cd Formata-oABNT
-
-# Crie o ambiente virtual
 python -m venv .venv
-
-# Ative o ambiente
-# Windows:
-.venv\Scripts\activate
-# Linux/Mac:
-source .venv/bin/activate
-
-# Instale as dependências
+.venv\Scripts\activate          # Windows
 pip install -e ".[dev]"
 ```
 
-## 📖 Uso
-
-### Gerar modelo para preenchimento
+## Uso pela linha de comando
 
 ```bash
-# Gera um template JSON para TCC
-formata-abnt modelo tcc
+# Gera <entrada>_abnt.docx
+formata-abnt meu_tcc.docx
 
-# Gera template para artigo
-formata-abnt modelo artigo
+# Escolhendo o arquivo de saída e a fonte
+formata-abnt meu_tcc.docx -o meu_tcc_formatado.docx --fonte Arial
 ```
 
-### Formatar documento
+## Uso como biblioteca
+
+```python
+from formata_abnt.abnt.reformatador import ReformatadorABNT
+from formata_abnt.docx_io import abrir, salvar
+
+documento = abrir("meu_tcc.docx")
+ReformatadorABNT().reformatar(documento)
+salvar(documento, "meu_tcc_abnt.docx")
+```
+
+## Regras aplicadas (NBR 14724)
+
+| Item | Valor |
+|------|-------|
+| Margens | 3 cm (superior/esquerda), 2 cm (inferior/direita) |
+| Fonte | Times New Roman 12 pt |
+| Espaçamento entre linhas | 1,5 |
+| Alinhamento do corpo | Justificado |
+| Recuo da 1ª linha | 1,25 cm |
+| Títulos nível 1 | Centralizado, negrito, sem recuo |
+
+Os valores são configuráveis via `NormasABNT` (ex.: trocar a fonte para Arial).
+
+## Testes
 
 ```bash
-# Formata a partir de um arquivo JSON
-formata-abnt formatar meu_trabalho.json
-
-# Especificar formato de saída
-formata-abnt formatar meu_trabalho.json --formato docx
-
-# Especificar arquivo de saída
-formata-abnt formatar meu_trabalho.json --saida meu_tcc_formatado.docx
+python -m pytest -q
 ```
 
-### Informações sobre normas
+## Estrutura
 
-```bash
-formata-abnt info
 ```
-
-## 📁 Estrutura do Arquivo de Entrada
-
-O sistema aceita arquivos **JSON** ou **YAML** com a seguinte estrutura:
-
-```json
-{
-  "metadados": {
-    "titulo": "Título do Trabalho",
-    "autores": [{"nome_completo": "Nome do Autor"}],
-    "tipo": "tcc",
-    "instituicao": "Universidade",
-    "cidade": "Cidade",
-    "ano": 2024
-  },
-  "resumo": "Texto do resumo...",
-  "secoes": [
-    {
-      "titulo": "Introdução",
-      "nivel": 1,
-      "conteudo": ["Parágrafo 1...", "Parágrafo 2..."]
-    }
-  ],
-  "referencias": [
-    {
-      "tipo": "livro",
-      "autores": ["SOBRENOME, Nome"],
-      "titulo": "Título do Livro",
-      "ano": 2023,
-      "editora": "Editora"
-    }
-  ]
-}
+formata_abnt/
+├── abnt/
+│   ├── normas.py        # parâmetros da NBR 14724
+│   ├── runs.py          # aplica fonte a um run
+│   ├── margens.py       # margens das seções
+│   ├── fontes.py        # fonte/tamanho do corpo
+│   ├── paragrafos.py    # espaçamento, recuo e justificação
+│   ├── titulos.py       # detecção e formatação de títulos
+│   └── reformatador.py  # orquestra tudo
+├── docx_io.py           # abrir/salvar .docx
+└── cli.py               # linha de comando
 ```
-
-## 📋 Normas ABNT Cobertas
-
-| Norma | Descrição |
-|-------|-----------|
-| NBR 14724 | Trabalhos acadêmicos — Estrutura e formatação |
-| NBR 6023 | Referências bibliográficas |
-| NBR 6024 | Numeração progressiva das seções |
-| NBR 6027 | Sumário |
-| NBR 6028 | Resumo e palavras-chave |
-| NBR 10520 | Citações no texto |
-| NBR 15287 | Projetos de pesquisa |
-
-## 🛠️ Desenvolvimento
-
-```bash
-# Rodar testes
-pytest
-
-# Lint
-ruff check .
-
-# Formatação
-ruff format .
-```
-
-## 📄 Licença
-
-MIT License

@@ -1,37 +1,25 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.egg-info/
 dist/
 build/
-*.egg
 
-# Virtual environments
+# Ambientes virtuais
 .venv/
 venv/
-env/
 
-# IDE
+# Testes / cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / SO
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Outputs
-*.docx
-*.pdf
-output/
-
-# Tests
-.coverage
-htmlcov/
-.pytest_cache/
-
-# Env
-.env
-.env.local
+# Saídas geradas
+saida/
+*_abnt.docx
