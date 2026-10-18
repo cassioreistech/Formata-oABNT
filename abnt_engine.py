@@ -1,6 +1,7 @@
 """Motor ABNT: sanitização e reformatação de arquivos .docx.
 
-Pipeline: ler -> sanitizar -> títulos -> citações -> tipografia -> margens -> salvar.
+Pipeline: ler -> sanitizar -> títulos -> citações -> tipografia -> margens
+-> referências -> salvar.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from formata_abnt.citacao_longa import aplicar_citacoes_longas
 from formata_abnt.docx_io import abrir, salvar
 from formata_abnt.margens import aplicar_margens
 from formata_abnt.normas import PADRAO, NormasABNT
+from formata_abnt.referencias import formatar_secao_referencias
 from formata_abnt.tipografia import aplicar_tipografia_corpo, definir_estilo_normal
 from formata_abnt.titulos import aplicar_titulos
 
@@ -31,6 +33,7 @@ class ResultadoFormatacao:
     paragrafos_formatados: int
     runs_sanitizados: int
     paragrafos_removidos: int
+    referencias_ordenadas: int = 0
 
 
 def _notificar(progresso: ProgressoCallback | None, mensagem: str) -> None:
@@ -74,6 +77,9 @@ class MotorABNT:
         aplicar_margens(documento, self.normas)
         definir_estilo_normal(documento, self.normas)
 
+        _notificar(progresso, "Ordenando referências (NBR 6023)...")
+        referencias = formatar_secao_referencias(documento, self.normas)
+
         _notificar(progresso, "Salvando documento...")
         arquivo_saida = salvar(documento, destino)
 
@@ -85,6 +91,7 @@ class MotorABNT:
             paragrafos_formatados=paragrafos,
             runs_sanitizados=resultado_sanitizacao.runs_limpos,
             paragrafos_removidos=resultado_sanitizacao.paragrafos_removidos,
+            referencias_ordenadas=referencias,
         )
 
 

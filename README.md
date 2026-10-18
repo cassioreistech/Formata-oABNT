@@ -10,6 +10,8 @@ ABNT. Roda 100% local, sem internet, sem servidor e sem Docker.
 - **NBR 10520** — aplica o estilo `ABNT_CitacaoLonga` (recuo 4 cm, 10 pt, espaço simples)
   a citações diretas com mais de 3 linhas.
 - **NBR 6024** — identifica a hierarquia de títulos (`1. INTRODUÇÃO`, `1.1 Objetivos`).
+- **NBR 6023** — gerador de referências (livro, artigo de periódico e site), com
+  destaque em negrito real e ordenação alfabética automática na seção REFERÊNCIAS.
 - **Sanitização** — remove espaços invisíveis, espaços repetidos, quebras duplas e
   artefatos de cópia da web/PDF.
 - **Preservação de marcações** — negrito, itálico e sublinhado do texto são mantidos.
@@ -39,16 +41,40 @@ python app_gui.py
 3. Acompanhe o log e o progresso.
 4. Use **Abrir pasta de destino** para localizar o arquivo `*_abnt.docx`.
 
+## Uso — Aba "Referências ABNT"
+
+1. Escolha o tipo: **Livro**, **Artigo**, **Site** ou **Texto bruto**.
+2. Preencha os campos (ou cole a referência já escrita na opção "Texto bruto").
+3. **Gerar Referência** mostra a prévia; **Gerar e Copiar Referência** envia o texto
+   para a área de transferência.
+4. **Inserir na Seção de Referências do Word** insere o item em um `.docx`,
+   criando a seção `REFERÊNCIAS` se necessário.
+5. **Ordenar alfabeticamente as referências de um .docx** reorganiza a seção
+   inteira em ordem alfabética (e reaplica a formatação ABNT).
+
 ## Uso — Como biblioteca
 
 ```python
 from abnt_engine import formatar_para_abnt
+from abnt_references import ABNTReferenceFormatter
 
 resultado = formatar_para_abnt(
     "meu_tcc.docx",
     progresso=lambda msg: print(msg),
 )
 print("Gerado em:", resultado.arquivo_saida)
+
+formatador = ABNTReferenceFormatter()
+livro = formatador.format_book(
+    author="Maria Helena Diniz",
+    title="Curso de Direito Civil Brasileiro",
+    edition="38",
+    city="São Paulo",
+    publisher="Saraiva",
+    year=2022,
+)
+print(livro.texto_puro)      # texto simples
+print(livro.texto_markdown)  # com os destaques em **negrito**
 ```
 
 ## Gerar o executável (.exe)
@@ -71,6 +97,7 @@ python -m pytest -q
 ```
 Formata-oABNT/
 ├── abnt_engine.py        # Motor ABNT (pipeline completo)
+├── abnt_references.py    # Formatação de referências (NBR 6023)
 ├── app_gui.py            # Interface gráfica (CustomTkinter)
 ├── build_exe.py          # Empacotamento com PyInstaller
 ├── formata_abnt/
@@ -81,6 +108,7 @@ Formata-oABNT/
 │   ├── titulos.py        # Hierarquia de títulos (NBR 6024)
 │   ├── estilos.py        # Estilo ABNT_CitacaoLonga
 │   ├── citacao_longa.py  # Detecção de citações longas (NBR 10520)
+│   ├── referencias.py    # Seção REFERÊNCIAS: inserir e ordenar (NBR 6023)
 │   ├── sanitizador.py    # Limpeza de artefatos de cópia
 │   ├── docx_io.py        # Abrir/salvar .docx
 │   ├── caminhos.py       # Nomes de arquivo de saída

@@ -82,3 +82,35 @@ def test_nome_de_saida_automatico(arquivo_sujo: Path) -> None:
     resultado = MotorABNT().processar(arquivo_sujo)
 
     assert resultado.arquivo_saida.name == "sujo_abnt.docx"
+
+
+def test_engine_ordena_referencias(tmp_path: Path) -> None:
+    """O pipeline ordena alfabeticamente as referências da seção REFERÊNCIAS."""
+    from abnt_references import ABNTReferenceFormatter
+    from formata_abnt.referencias import inserir_referencia, paragrafos_da_secao
+
+    formatador = ABNTReferenceFormatter()
+    documento = Document()
+    documento.add_paragraph("1. INTRODUÇÃO")
+    documento.add_paragraph("Texto do trabalho.")
+    inserir_referencia(
+        documento,
+        formatador.format_book(author="Zélia Zebra", title="Zeta", city="S", publisher="P", year=2020),
+        ordenar=False,
+    )
+    inserir_referencia(
+        documento,
+        formatador.format_book(author="Ana Alves", title="Alfa", city="S", publisher="P", year=2021),
+        ordenar=False,
+    )
+
+    origem = tmp_path / "refs.docx"
+    documento.save(str(origem))
+
+    resultado = MotorABNT().processar(origem, tmp_path / "refs_abnt.docx")
+
+    assert resultado.referencias_ordenadas == 2
+    reaberto = abrir(resultado.arquivo_saida)
+    itens = paragrafos_da_secao(reaberto)
+    assert itens[0].text.startswith("ALVES")
+    assert itens[1].text.startswith("ZEBRA")
