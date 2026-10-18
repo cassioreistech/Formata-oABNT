@@ -114,3 +114,6 @@ def test_engine_ordena_referencias(tmp_path: Path) -> None:
     itens = paragrafos_da_secao(reaberto)
     assert itens[0].text.startswith("ALVES")
     assert itens[1].text.startswith("ZEBRA")
+    # O pipeline também reaplica o negrito ABNT nos títulos.
+    assert [run.text for run in itens[0].runs if run.bold] == ["Alfa"]
+    assert [run.text for run in itens[1].runs if run.bold] == ["Zeta"]

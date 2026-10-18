@@ -7,6 +7,7 @@ ordem alfabética no final do arquivo.
 
 from __future__ import annotations
 
+import copy
 import re
 import unicodedata
 
@@ -15,12 +16,15 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt
 from docx.text.paragraph import Paragraph
+from docx.text.run import Run
 
-from abnt_references import Referencia
+from abnt_references import ABNTReferenceFormatter, Referencia
 from formata_abnt.normas import PADRAO, NormasABNT
 from formata_abnt.runs import definir_fonte
 
 NOME_SECAO = "REFERÊNCIAS"
+
+_FORMATADOR = ABNTReferenceFormatter()
 
 
 def normalizar(texto: str) -> str:
@@ -85,6 +89,86 @@ def escrever_referencia(
     return paragrafo
 
 
+def _limites_dos_runs(paragrafo: Paragraph) -> list[tuple[Run, int, int]]:
+    """Devolve ``[(run, início, fim)]`` com os deslocamentos no texto do parágrafo."""
+    limites: list[tuple[Run, int, int]] = []
+    deslocamento = 0
+    for run in paragrafo.runs:
+        tamanho = len(run.text)
+        limites.append((run, deslocamento, deslocamento + tamanho))
+        deslocamento += tamanho
+    return limites
+
+
+def _dividir_run(run: Run, posicao: int) -> Run:
+    """Divide o run em ``posicao`` e devolve o novo run com a parte final.
+
+    Clona o elemento XML, portanto a formatação é mantida nas duas metades.
+    """
+    texto = run.text
+    novo_elemento = copy.deepcopy(run._element)
+    run._element.addnext(novo_elemento)
+
+    novo_run = Run(novo_elemento, run._parent)
+    run.text = texto[:posicao]
+    novo_run.text = texto[posicao:]
+    return novo_run
+
+
+def _dividir_no_deslocamento(paragrafo: Paragraph, deslocamento: int) -> None:
+    """Garante que ``deslocamento`` seja fronteira entre dois runs."""
+    for run, inicio, fim in _limites_dos_runs(paragrafo):
+        if inicio < deslocamento < fim:
+            _dividir_run(run, deslocamento - inicio)
+            return
+
+
+def aplicar_negrito_no_intervalo(
+    paragrafo: Paragraph, inicio: int, fim: int
+) -> bool:
+    """Marca em negrito o intervalo informado, preservando todo o texto.
+
+    Os runs são divididos nas fronteiras do intervalo; nenhum caractere é
+    adicionado, removido ou reordenado.
+    """
+    if inicio >= fim:
+        return False
+
+    _dividir_no_deslocamento(paragrafo, fim)
+    _dividir_no_deslocamento(paragrafo, inicio)
+
+    alterou = False
+    for run, run_inicio, run_fim in _limites_dos_runs(paragrafo):
+        dentro = run_inicio >= inicio and run_fim <= fim
+        if dentro and run.bold is not True:
+            run.bold = True
+            alterou = True
+        elif not dentro and run.bold:
+            run.bold = False
+            alterou = True
+    return alterou
+
+
+def realcar_referencia(paragrafo: Paragraph) -> bool:
+    """Reaplica o negrito ABNT em uma referência já escrita, sem alterar o texto.
+
+    Devolve ``True`` se a formatação de destaque mudou.
+    """
+    intervalo = _FORMATADOR.localizar_destaque(paragrafo.text)
+    if intervalo is None:
+        return False
+    return aplicar_negrito_no_intervalo(paragrafo, intervalo[0], intervalo[1])
+
+
+def realcar_secao(documento: DocumentoDocx) -> int:
+    """Reaplica o negrito em todas as referências e devolve quantas mudaram."""
+    alteradas = 0
+    for paragrafo in paragrafos_da_secao(documento):
+        if realcar_referencia(paragrafo):
+            alteradas += 1
+    return alteradas
+
+
 def paragrafos_da_secao(documento: DocumentoDocx) -> list[Paragraph]:
     """Lista os parágrafos de referência (não vazios) após o título."""
     titulo = encontrar_secao_referencias(documento)
@@ -137,9 +221,9 @@ def inserir_referencia(
 
 
 def formatar_secao_referencias(
-    documento: DocumentoDocx, normas: NormasABNT = PADRAO
+    documento: DocumentoDocx, normas: NormasABNT = PADRAO, realcar: bool = True
 ) -> int:
-    """Reaplica a formatação ABNT e ordena as referências já existentes.
+    """Reformata, reaplica o negrito ABNT e ordena as referências existentes.
 
     Não cria a seção caso ela não exista; nesse caso devolve ``0``.
     """
@@ -149,6 +233,8 @@ def formatar_secao_referencias(
 
     for paragrafo in referencias:
         definir_formatacao_referencia(paragrafo, normas)
+        if realcar:
+            realcar_referencia(paragrafo)
         for run in paragrafo.runs:
             definir_fonte(run, normas.fonte_corpo, normas.tamanho_corpo_pt)
 

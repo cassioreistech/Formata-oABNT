@@ -305,7 +305,7 @@ class AplicacaoABNT(_JanelaBase):
 
         ctk.CTkButton(
             pai,
-            text="Ordenar alfabeticamente as referências de um .docx",
+            text="Reformatar, realçar o negrito e ordenar as referências de um .docx",
             fg_color=CORES["cinza"],
             hover_color=CORES["cinza_hover"],
             command=self._ordenar_docx,
@@ -457,7 +457,7 @@ class AplicacaoABNT(_JanelaBase):
         messagebox.showinfo("Concluído", "Referência inserida e ordenada com sucesso.")
 
     def _ordenar_docx(self) -> None:
-        """Ordena alfabeticamente as referências de um .docx escolhido."""
+        """Reformata, reaplica o negrito e ordena as referências de um .docx."""
         destino = self._escolher_docx("Selecione o documento com referências")
         if destino is None:
             return
@@ -477,8 +477,15 @@ class AplicacaoABNT(_JanelaBase):
             return
 
         self.abas.set("Formatar Documento")
-        self._registrar_log(f"{total} referência(s) formatada(s) e ordenada(s) em: {destino}")
-        messagebox.showinfo("Concluído", f"{total} referência(s) ordenada(s) com sucesso.")
+        self._registrar_log(
+            f"{total} referência(s) reformatada(s), com negrito realçado e "
+            f"ordenadas em: {destino}"
+        )
+        messagebox.showinfo(
+            "Concluído",
+            f"{total} referência(s) reformatada(s), com o negrito realçado e "
+            "ordenadas com sucesso.",
+        )
 
     def _escolher_docx(self, titulo: str) -> Path | None:
         """Abre o diálogo de seleção de um .docx de destino."""

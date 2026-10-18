@@ -8,6 +8,7 @@ from abnt_references import (
     ABNTReferenceFormatter,
     Referencia,
     Segmento,
+    ajustar_intervalo,
     normalizar_para_ordenacao,
 )
 
@@ -191,3 +192,71 @@ def test_analisar_texto_bruto_vazio() -> None:
     referencia = FORMATADOR.analisar_texto_bruto("   ")
 
     assert referencia.segmentos == []
+
+
+def test_detectar_tipo() -> None:
+    """Classifica o texto por tipo de fonte."""
+    assert FORMATADOR.detectar_tipo("X. Titulo. https://a.com") == "site"
+    assert FORMATADOR.detectar_tipo("X. Art. Rev, Cidade, v. 1, n. 2, p. 3-4, 2020.") == "artigo"
+    assert FORMATADOR.detectar_tipo("X. Livro. Cidade: Editora, 2020.") == "livro"
+    assert FORMATADOR.detectar_tipo("anotação solta") == "generico"
+
+
+def test_localizar_destaque_livro() -> None:
+    """O destaque do livro é exatamente o título, sem o ponto final."""
+    texto = "DINIZ, Maria Helena. Curso de Direito Civil. 38 ed. São Paulo: Saraiva, 2022."
+    intervalo = FORMATADOR.localizar_destaque(texto)
+
+    assert intervalo is not None
+    assert texto[intervalo[0] : intervalo[1]] == "Curso de Direito Civil"
+
+
+def test_localizar_destaque_livro_com_iniciais_no_autor() -> None:
+    """Autor com iniciais não confunde a localização do título."""
+    texto = "SILVA, J. A. Manual de Processo Civil. São Paulo: RT, 2019."
+    intervalo = FORMATADOR.localizar_destaque(texto)
+
+    assert intervalo is not None
+    assert texto[intervalo[0] : intervalo[1]] == "Manual de Processo Civil"
+
+
+def test_localizar_destaque_artigo() -> None:
+    """O destaque do artigo é exatamente o título do periódico."""
+    texto = (
+        "SANTOS, Carlos Alberto dos. Impactos da IA no Direito. "
+        "Revista Brasileira de Tecnologia, Brasília, v. 12, n. 2, p. 45-60, 2024."
+    )
+    intervalo = FORMATADOR.localizar_destaque(texto)
+
+    assert intervalo is not None
+    assert texto[intervalo[0] : intervalo[1]] == "Revista Brasileira de Tecnologia"
+
+
+def test_localizar_destaque_site_sem_autor() -> None:
+    """Site sem autor destaca apenas a primeira palavra do título."""
+    texto = "Censo demográfico 2022. Disponível em: <https://exemplo.org>. Acesso em: 5 mar. 2026."
+    intervalo = FORMATADOR.localizar_destaque(texto)
+
+    assert intervalo is not None
+    assert texto[intervalo[0] : intervalo[1]] == "Censo"
+
+
+def test_localizar_destaque_site_com_autor_nao_destaca() -> None:
+    """Site com autor não recebe negrito (regra da NBR 6023 adotada)."""
+    texto = (
+        "IBGE. Censo 2022. Disponível em: <https://www.ibge.gov.br>. "
+        "Acesso em: 10 jan. 2026."
+    )
+
+    assert FORMATADOR.localizar_destaque(texto) is None
+
+
+def test_localizar_destaque_generico() -> None:
+    """Texto sem padrão reconhecido não recebe destaque."""
+    assert FORMATADOR.localizar_destaque("Anotação qualquer sem padrão") is None
+
+
+def test_ajustar_intervalo() -> None:
+    """O intervalo é recolhido removendo espaços e pontuação das bordas."""
+    assert ajustar_intervalo("  Título.  ", 0, 11) == (2, 8)
+    assert ajustar_intervalo("   ", 0, 3) is None

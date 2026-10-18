@@ -13,6 +13,7 @@ from formata_abnt.docx_io import abrir, salvar
 from formata_abnt.normas import PADRAO
 from formata_abnt.referencias import (
     NOME_SECAO,
+    aplicar_negrito_no_intervalo,
     encontrar_secao_referencias,
     escrever_referencia,
     formatar_secao_referencias,
@@ -20,6 +21,8 @@ from formata_abnt.referencias import (
     inserir_referencia,
     ordenar_referencias,
     paragrafos_da_secao,
+    realcar_referencia,
+    realcar_secao,
 )
 
 FORMATADOR = ABNTReferenceFormatter()
@@ -157,3 +160,133 @@ def test_salvar_e_reabrir_preserva_referencias(tmp_path: Path) -> None:
     assert len(itens) == 2
     assert itens[0].text.startswith("ALVES")
     assert any(run.bold for run in itens[0].runs)
+
+
+# ── Reanálise automática do negrito ─────────────────────────────────────────
+
+
+def test_aplicar_negrito_divide_run_ao_meio() -> None:
+    """Um run único é fatiado nas fronteiras do intervalo, sem perder texto."""
+    documento = Document()
+    paragrafo = documento.add_paragraph("abcdefghij")
+
+    assert aplicar_negrito_no_intervalo(paragrafo, 3, 7)
+
+    assert paragrafo.text == "abcdefghij"
+    assert [run.text for run in paragrafo.runs] == ["abc", "defg", "hij"]
+    assert [run.text for run in paragrafo.runs if run.bold] == ["defg"]
+
+
+def test_realcar_referencia_preserva_texto_e_destaca_livro() -> None:
+    """O texto do livro fica idêntico; só o título entra em negrito."""
+    original = (
+        "DINIZ, Maria Helena. Curso de Direito Civil. 38 ed. São Paulo: Saraiva, 2022."
+    )
+    documento = Document()
+    paragrafo = documento.add_paragraph(original)
+
+    assert realcar_referencia(paragrafo) is True
+
+    assert paragrafo.text == original
+    assert [run.text for run in paragrafo.runs if run.bold] == ["Curso de Direito Civil"]
+
+
+def test_realcar_referencia_destaca_periodico() -> None:
+    """Em artigos, o negrito vai para o título do periódico."""
+    original = (
+        "SANTOS, Carlos. Impactos da IA no Direito. Revista Brasileira de Tecnologia, "
+        "Brasília, v. 12, n. 2, p. 45-60, 2024."
+    )
+    documento = Document()
+    paragrafo = documento.add_paragraph(original)
+
+    realcar_referencia(paragrafo)
+
+    assert paragrafo.text == original
+    assert [run.text for run in paragrafo.runs if run.bold] == [
+        "Revista Brasileira de Tecnologia"
+    ]
+
+
+def test_realcar_referencia_remove_negrito_fora_do_lugar() -> None:
+    """Negrito aplicado no lugar errado é corrigido."""
+    original = "ALVES, Ana. Alfa. São Paulo: Editora, 2021."
+    documento = Document()
+    paragrafo = documento.add_paragraph()
+    paragrafo.add_run("ALVES, Ana. ").bold = True
+    paragrafo.add_run("Alfa. São Paulo: Editora, 2021.")
+
+    realcar_referencia(paragrafo)
+
+    assert paragrafo.text == original
+    assert [run.text for run in paragrafo.runs if run.bold] == ["Alfa"]
+
+
+def test_realcar_referencia_generica_nao_altera() -> None:
+    """Referência genérica não tem destaque aplicado."""
+    documento = Document()
+    paragrafo = documento.add_paragraph("Anotação solta sem padrão ABNT")
+
+    assert realcar_referencia(paragrafo) is False
+    assert paragrafo.text == "Anotação solta sem padrão ABNT"
+
+
+def test_realcar_secao_conta_apenas_alteradas() -> None:
+    """A primeira passada altera; a segunda não encontra o que mudar."""
+    documento = Document()
+    garantir_secao_referencias(documento)
+    documento.add_paragraph("ALVES, Ana. Alfa. São Paulo: Editora, 2021.")
+    documento.add_paragraph("ZEBRA, Zélia. Zeta. São Paulo: Editora, 2020.")
+
+    assert realcar_secao(documento) == 2
+    assert realcar_secao(documento) == 0
+
+
+def test_formatar_secao_realca_e_ordena() -> None:
+    """A rotina completa realça o negrito e reordena alfabeticamente."""
+    documento = Document()
+    garantir_secao_referencias(documento)
+    documento.add_paragraph("ZEBRA, Zélia. Zeta. São Paulo: Editora, 2020.")
+    documento.add_paragraph("ALVES, Ana. Alfa. São Paulo: Editora, 2021.")
+
+    total = formatar_secao_referencias(documento)
+
+    assert total == 2
+    itens = paragrafos_da_secao(documento)
+    assert itens[0].text.startswith("ALVES")
+    assert [run.text for run in itens[0].runs if run.bold] == ["Alfa"]
+    assert [run.text for run in itens[1].runs if run.bold] == ["Zeta"]
+
+
+def test_formatar_secao_pode_desativar_realce() -> None:
+    """Com realcar=False, só a formatação e a ordem mudam."""
+    documento = Document()
+    garantir_secao_referencias(documento)
+    documento.add_paragraph("ZEBRA, Zélia. Zeta. São Paulo: Editora, 2020.")
+    documento.add_paragraph("ALVES, Ana. Alfa. São Paulo: Editora, 2021.")
+
+    formatar_secao_referencias(documento, realcar=False)
+
+    itens = paragrafos_da_secao(documento)
+    assert itens[0].text.startswith("ALVES")
+    assert not any(run.bold for run in itens[0].runs)
+
+
+def test_realce_persiste_apos_salvar_e_reabrir(tmp_path: Path) -> None:
+    """O negrito realçado continua no arquivo gravado."""
+    documento: DocumentoDocx = Document()
+    garantir_secao_referencias(documento)
+    documento.add_paragraph(
+        "DINIZ, Maria Helena. Curso de Direito Civil. 38 ed. São Paulo: Saraiva, 2022."
+    )
+
+    destino = tmp_path / "realcado.docx"
+    formatar_secao_referencias(documento)
+    salvar(documento, destino)
+
+    reaberto = abrir(destino)
+    item = paragrafos_da_secao(reaberto)[0]
+    assert item.text == (
+        "DINIZ, Maria Helena. Curso de Direito Civil. 38 ed. São Paulo: Saraiva, 2022."
+    )
+    assert [run.text for run in item.runs if run.bold] == ["Curso de Direito Civil"]

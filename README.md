@@ -11,7 +11,8 @@ ABNT. Roda 100% local, sem internet, sem servidor e sem Docker.
   a citações diretas com mais de 3 linhas.
 - **NBR 6024** — identifica a hierarquia de títulos (`1. INTRODUÇÃO`, `1.1 Objetivos`).
 - **NBR 6023** — gerador de referências (livro, artigo de periódico e site), com
-  destaque em negrito real e ordenação alfabética automática na seção REFERÊNCIAS.
+  destaque em negrito real, **reanálise automática do negrito** em referências já
+  existentes e ordenação alfabética automática na seção REFERÊNCIAS.
 - **Sanitização** — remove espaços invisíveis, espaços repetidos, quebras duplas e
   artefatos de cópia da web/PDF.
 - **Preservação de marcações** — negrito, itálico e sublinhado do texto são mantidos.
@@ -49,8 +50,14 @@ python app_gui.py
    para a área de transferência.
 4. **Inserir na Seção de Referências do Word** insere o item em um `.docx`,
    criando a seção `REFERÊNCIAS` se necessário.
-5. **Ordenar alfabeticamente as referências de um .docx** reorganiza a seção
-   inteira em ordem alfabética (e reaplica a formatação ABNT).
+5. **Reformatar, realçar o negrito e ordenar as referências de um .docx** analisa
+   cada referência já escrita, **reaplica o negrito no trecho correto** (título do
+   livro, título do periódico ou primeira palavra do site sem autor) e reorganiza
+   a seção inteira em ordem alfabética. O texto não é alterado: apenas o destaque
+   em negrito é reposicionado.
+
+> O motor de formatação também executa essa reanálise automaticamente ao processar
+> o documento — a seção REFERÊNCIAS sai corrigida, realçada e ordenada.
 
 ## Uso — Como biblioteca
 
@@ -108,7 +115,7 @@ Formata-oABNT/
 │   ├── titulos.py        # Hierarquia de títulos (NBR 6024)
 │   ├── estilos.py        # Estilo ABNT_CitacaoLonga
 │   ├── citacao_longa.py  # Detecção de citações longas (NBR 10520)
-│   ├── referencias.py    # Seção REFERÊNCIAS: inserir e ordenar (NBR 6023)
+│   ├── referencias.py    # Seção REFERÊNCIAS: inserir, realçar e ordenar (NBR 6023)
 │   ├── sanitizador.py    # Limpeza de artefatos de cópia
 │   ├── docx_io.py        # Abrir/salvar .docx
 │   ├── caminhos.py       # Nomes de arquivo de saída

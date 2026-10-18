@@ -39,6 +39,7 @@ _NUMERO_RE = re.compile(r"\bn\.\s*(\d+)", re.IGNORECASE)
 _PAGINAS_RE = re.compile(r"\bp\.\s*([\d\-\u2013]+)", re.IGNORECASE)
 _EDICAO_RE = re.compile(r"\b(\d+)\s*\.?\s*ed\.?", re.IGNORECASE)
 _IMPRENTA_RE = re.compile(r"([^.:;]+?):\s*([^:,;]+),\s*((?:19|20)\d{2})")
+_DISPONIVEL_RE = re.compile(r"Dispon[ií]vel em:?\s*<?\s*", re.IGNORECASE)
 
 
 def normalizar_para_ordenacao(texto: str) -> str:
@@ -46,6 +47,15 @@ def normalizar_para_ordenacao(texto: str) -> str:
     decomposto = unicodedata.normalize("NFKD", texto)
     sem_acento = "".join(c for c in decomposto if not unicodedata.combining(c))
     return re.sub(r"\s+", " ", sem_acento).strip().casefold()
+
+
+def ajustar_intervalo(texto: str, inicio: int, fim: int) -> tuple[int, int] | None:
+    """Recolhe o intervalo removendo espaços e pontuação das bordas."""
+    while inicio < fim and texto[inicio].isspace():
+        inicio += 1
+    while fim > inicio and (texto[fim - 1].isspace() or texto[fim - 1] in ".,;:"):
+        fim -= 1
+    return (inicio, fim) if fim > inicio else None
 
 
 @dataclass(frozen=True)
@@ -245,6 +255,19 @@ class ABNTReferenceFormatter:
 
     # ── Análise de texto bruto ──────────────────────────────────────────────
 
+    def detectar_tipo(self, texto: str) -> str:
+        """Classifica o texto em ``site``, ``artigo``, ``livro`` ou ``generico``."""
+        limpo = re.sub(r"\s+", " ", (texto or "")).strip()
+        if not limpo:
+            return "generico"
+        if _URL_RE.search(limpo):
+            return "site"
+        if _VOLUME_RE.search(limpo) or _NUMERO_RE.search(limpo) or _PAGINAS_RE.search(limpo):
+            return "artigo"
+        if _IMPRENTA_RE.search(limpo):
+            return "livro"
+        return "generico"
+
     def analisar_texto_bruto(self, texto: str) -> Referencia:
         """Interpreta uma referência já escrita e a reformata segundo a ABNT.
 
@@ -256,13 +279,90 @@ class ABNTReferenceFormatter:
         if not limpo:
             return Referencia([], tipo="generico")
 
-        if _URL_RE.search(limpo):
+        tipo = self.detectar_tipo(limpo)
+        if tipo == "site":
             return self._analisar_site(limpo)
-        if _VOLUME_RE.search(limpo) or _NUMERO_RE.search(limpo) or _PAGINAS_RE.search(limpo):
+        if tipo == "artigo":
             return self._analisar_artigo(limpo)
-        if _IMPRENTA_RE.search(limpo):
+        if tipo == "livro":
             return self._analisar_livro(limpo)
         return Referencia([Segmento(limpo)], tipo="generico")
+
+    # ── Destaque em negrito (reanálise de referências existentes) ───────────
+
+    def localizar_destaque(self, texto: str) -> tuple[int, int] | None:
+        """Devolve o intervalo ``(início, fim)`` que deve ficar em negrito.
+
+        Permite reaplicar o destaque ABNT em uma referência já escrita sem
+        alterar uma única letra do texto. Devolve ``None`` quando nada deve
+        ser destacado (referência genérica ou site com autor).
+        """
+        limpo = re.sub(r"\s+", " ", (texto or ""))
+        tipo = self.detectar_tipo(limpo)
+        if tipo == "livro":
+            return self._destaque_livro(limpo)
+        if tipo == "artigo":
+            return self._destaque_artigo(limpo)
+        if tipo == "site":
+            return self._destaque_site(limpo)
+        return None
+
+    @staticmethod
+    def _destaque_livro(texto: str) -> tuple[int, int] | None:
+        """Destaca o título do livro (entre o autor e a edição/imprenta)."""
+        fim = len(texto)
+        imprenta = _IMPRENTA_RE.search(texto)
+        if imprenta:
+            fim = imprenta.start()
+        edicao = _EDICAO_RE.search(texto[:fim])
+        if edicao:
+            fim = edicao.start()
+
+        cabeca = texto[:fim].rstrip(" .,;:")
+        posicao = cabeca.rfind(". ")
+        inicio = posicao + 2 if posicao != -1 else 0
+        return ajustar_intervalo(texto, inicio, fim)
+
+    @staticmethod
+    def _destaque_artigo(texto: str) -> tuple[int, int] | None:
+        """Destaca o título do periódico (entre o artigo e ``Cidade, v.``)."""
+        corte = len(texto)
+        for encontrado in (
+            _VOLUME_RE.search(texto),
+            _NUMERO_RE.search(texto),
+            _PAGINAS_RE.search(texto),
+        ):
+            if encontrado:
+                corte = min(corte, encontrado.start())
+
+        cabeca = texto[:corte].rstrip(" .,;:")
+        ultima_virgula = cabeca.rfind(",")
+        if ultima_virgula != -1:
+            cabeca = cabeca[:ultima_virgula]
+
+        posicao = cabeca.rfind(". ")
+        inicio = posicao + 2 if posicao != -1 else 0
+        return ajustar_intervalo(texto, inicio, len(cabeca))
+
+    @staticmethod
+    def _destaque_site(texto: str) -> tuple[int, int] | None:
+        """Destaca a primeira palavra do título quando o site não tem autor.
+
+        Um site com autor (``AUTOR. Título. Disponível em: ...``) não recebe
+        negrito, seguindo a regra adotada pelo formatador.
+        """
+        rotulo = _DISPONIVEL_RE.search(texto)
+        antes = texto[: rotulo.start()] if rotulo else texto
+        cabeca = antes.rstrip(" .,;:<")
+
+        if not cabeca or ". " in cabeca:
+            return None
+
+        sem_espaco = texto.lstrip()
+        if not sem_espaco:
+            return None
+        inicio = len(texto) - len(sem_espaco)
+        return ajustar_intervalo(texto, inicio, inicio + len(sem_espaco.split()[0]))
 
     @staticmethod
     def _separar_autor(texto: str) -> tuple[str, str]:
