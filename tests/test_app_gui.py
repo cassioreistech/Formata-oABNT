@@ -52,3 +52,18 @@ def test_metodos_da_aba_de_referencias_existem() -> None:
         "_autores_do_formulario",
     ):
         assert callable(getattr(app_gui.AplicacaoABNT, metodo))
+
+
+def test_metodos_da_aba_pop_existem() -> None:
+    """A classe expõe as ações da aba POP / Empresarial."""
+    for metodo in (
+        "_montar_aba_pop",
+        "_ao_toggle_pop",
+        "_config_pop_da_interface",
+        "_carregar_pop_na_interface",
+        "_atualizar_preview_pop",
+        "_selecionar_logo_pop",
+        "_salvar_pop",
+        "_aplicar_pop_a_documento",
+    ):
+        assert callable(getattr(app_gui.AplicacaoABNT, metodo))

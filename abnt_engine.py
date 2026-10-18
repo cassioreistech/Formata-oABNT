@@ -10,9 +10,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from formata_abnt import sanitizador
+from formata_abnt import pop, sanitizador
 from formata_abnt.caminhos import nome_saida_padrao
 from formata_abnt.citacao_longa import aplicar_citacoes_longas
+from formata_abnt.config import Preferencias
 from formata_abnt.docx_io import abrir, salvar
 from formata_abnt.margens import aplicar_margens
 from formata_abnt.normas import PADRAO, NormasABNT
@@ -34,6 +35,7 @@ class ResultadoFormatacao:
     runs_sanitizados: int
     paragrafos_removidos: int
     referencias_ordenadas: int = 0
+    pop_aplicado: bool = False
 
 
 def _notificar(progresso: ProgressoCallback | None, mensagem: str) -> None:
@@ -45,8 +47,13 @@ def _notificar(progresso: ProgressoCallback | None, mensagem: str) -> None:
 class MotorABNT:
     """Executa o pipeline completo de formatação ABNT em um .docx."""
 
-    def __init__(self, normas: NormasABNT = PADRAO) -> None:
+    def __init__(
+        self,
+        normas: NormasABNT = PADRAO,
+        preferencias: Preferencias | None = None,
+    ) -> None:
         self.normas = normas
+        self.preferencias = preferencias
 
     def processar(
         self,
@@ -77,6 +84,12 @@ class MotorABNT:
         aplicar_margens(documento, self.normas)
         definir_estilo_normal(documento, self.normas)
 
+        pop_aplicado = False
+        if self.preferencias and self.preferencias.pop.ativo:
+            _notificar(progresso, "Aplicando modelo POP...")
+            pop.aplicar_modelo_pop(documento, self.preferencias.pop)
+            pop_aplicado = True
+
         _notificar(progresso, "Ordenando referências (NBR 6023)...")
         referencias = formatar_secao_referencias(documento, self.normas)
 
@@ -92,6 +105,7 @@ class MotorABNT:
             runs_sanitizados=resultado_sanitizacao.runs_limpos,
             paragrafos_removidos=resultado_sanitizacao.paragrafos_removidos,
             referencias_ordenadas=referencias,
+            pop_aplicado=pop_aplicado,
         )
 
 
@@ -99,7 +113,8 @@ def formatar_para_abnt(
     entrada: str | Path,
     saida: str | Path | None = None,
     normas: NormasABNT = PADRAO,
+    preferencias: Preferencias | None = None,
     progresso: ProgressoCallback | None = None,
 ) -> ResultadoFormatacao:
     """Atalho funcional para reformatar um único arquivo .docx."""
-    return MotorABNT(normas).processar(entrada, saida, progresso)
+    return MotorABNT(normas, preferencias).processar(entrada, saida, progresso)

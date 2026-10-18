@@ -84,6 +84,64 @@ def test_nome_de_saida_automatico(arquivo_sujo: Path) -> None:
     assert resultado.arquivo_saida.name == "sujo_abnt.docx"
 
 
+def test_pipeline_chama_formatacao_padrao(tmp_path: Path) -> None:
+    """O pipeline padrão formata o documento sem POP."""
+    documento: DocumentoDocx = Document()
+    documento.add_paragraph("1. INTRODUCAO")
+    documento.add_paragraph("Texto do capitulo.")
+
+    entrada = tmp_path / "doc.docx"
+    saida = tmp_path / "doc_abnt.docx"
+    documento.save(str(entrada))
+
+    resultado = formatar_para_abnt(entrada, saida)
+
+    assert resultado.arquivo_saida == saida
+    assert resultado.paragrafos_formatados > 0
+    assert resultado.pop_aplicado is False
+
+
+def test_pipeline_aplica_pop_quando_preferencia_ativa(tmp_path: Path) -> None:
+    """O pipeline aplica o modelo POP quando a preferência está ativa."""
+    from formata_abnt.config import ConfiguracaoPOP, Preferencias
+
+    documento: DocumentoDocx = Document()
+    documento.add_paragraph("1. INTRODUCAO")
+
+    entrada = tmp_path / "doc.docx"
+    saida = tmp_path / "doc_abnt.docx"
+    documento.save(str(entrada))
+
+    preferencias = Preferencias(
+        pop=ConfiguracaoPOP(ativo=True, nome_empresa="Empresa", titulo_pop="POP X")
+    )
+    resultado = formatar_para_abnt(entrada, saida, preferencias=preferencias)
+
+    assert resultado.pop_aplicado is True
+
+    reaberto = abrir(saida)
+    pop_text = reaberto.sections[0].header.tables[0].rows[0].cells[1].text
+    empresa_text = reaberto.sections[0].header.tables[0].rows[0].cells[0].text
+    assert "Empresa" in empresa_text
+    assert "POP X" in pop_text
+
+
+def test_pipeline_nao_aplica_pop_quando_preferencia_inativa(tmp_path: Path) -> None:
+    """O pipeline não aplica POP quando a preferência está desativada."""
+    from formata_abnt.config import ConfiguracaoPOP, Preferencias
+
+    documento: DocumentoDocx = Document()
+    entrada = tmp_path / "doc.docx"
+    saida = tmp_path / "doc_abnt.docx"
+    documento.save(str(entrada))
+
+    preferencias = Preferencias(pop=ConfiguracaoPOP(ativo=False))
+    resultado = formatar_para_abnt(entrada, saida, preferencias=preferencias)
+
+    assert resultado.pop_aplicado is False
+    assert abrir(saida).sections[0].header.tables == []
+
+
 def test_engine_ordena_referencias(tmp_path: Path) -> None:
     """O pipeline ordena alfabeticamente as referências da seção REFERÊNCIAS."""
     from abnt_references import ABNTReferenceFormatter

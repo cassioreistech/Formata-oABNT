@@ -1,31 +1,33 @@
 {
   "project_name": "Formata-oABNT",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "token_saving_mode": true,
-  "last_summary": "App desktop local (Python/CustomTkinter) que formata .docx nas normas ABNT. Refinamento NBR 6023 concluido: multiplos autores, mes 'maio', negrito no nome do site, lista de referencias em preparo com insercao em lote.",
-  "current_task": "Refinamento NBR 6023 (itens A+B+C+D) concluido e testado; aguardando definicao do proximo passo.",
+  "last_summary": "App desktop local para formatar .docx nas normas ABNT. POP/Empresarial implementado: cabecalho e rodape opcionais, ativados por checkbox, sem misturar com ABNT comum.",
+  "current_task": "Modelo POP/Empresarial concluido e testado; aguardando proximo passo.",
   "key_decisions": [
-    "Nao criar a classe ABNTReferenceRefined: estender ABNTReferenceFormatter (evita dois motores concorrentes para a mesma tarefa).",
-    "Multiplos autores: ate 3 citados separados por '; '; acima de 3 apenas o primeiro + ' et al. ' (sem asteriscos, sem italico - a norma mostra texto simples).",
-    "MESES_ABNT[5] = 'maio' (a NBR 6023 nao abrevia maio) - era 'mai.'.",
-    "format_website ganhou site_name: quando informado, o NOME DO SITE recebe o negrito (titulo do conteiner). Sem autor e sem site, a 1a palavra do titulo fica em caixa alta e negrito.",
-    "_destaque_site: conta blocos separados por '. ' antes de 'Disponivel em:'; 3+ blocos => ultimo e o nome do site; 1 bloco => 1a palavra do titulo; 2 blocos => nada.",
-    "_destaque_artigo corrigido: isola o trecho apos o ULTIMO '. ' antes de remover a cidade (a virgula de 'SOBRENOME, Nome' de autores multiplos era confundida com o separador da cidade).",
-    "API dos formatadores mantem os nomes em ingles e o parametro author (compatibilidade); o novo parametro authors (lista) tem precedencia quando informado.",
-    "Novo inserir_referencias(documento, referencias) em formata_abnt/referencias.py: grava o lote e ordena uma unica vez.",
-    "GUI: campo de autores com botao Adicionar (e Enter) + resumo; lista 'Referencias em preparo' (CTkTextbox somente leitura) com Remover a ultima e Limpar lista.",
-    "Itens descartados do pedido original: 'Extrair Dados da URL' (exigiria rede, quebra o offline-first) e a classe ABNTReferenceRefined (continha bugs: artigos sumiam, '*et al.*' literal, secao REFERENCIAS duplicada, titulo a esquerda, ordenacao sem tratar acentos)."
+    "POP e opcional e desativado por padrao; nao interfere na formatacao ABNT comum.",
+    "Nova aba 'POP / Empresarial' na GUI com checkbox ativador, campos configuraveis, preview, salvar padrao e aplicar a documento.",
+    "Novo formata_abnt/pop.py: ConfiguracaoPOP, aplicar_modelo_pop, desativar_pop, texto_resumo.",
+    "Cabecalho POP: tabela 1x2; esquerda (logo/nome da empresa), direita ('PROCEDIMENTO OPERACIONAL PADRÃO', titulo, codigo, revisao, area).",
+    "Rodape POP: tabela 1x3; esquerda (classificacao), centro (data de emissao), direita (campos PAGE / NUMPAGES via XML de campo do Word).",
+    "Preferencias.persistencia: ConfiguracaoPOP aninhada em Preferencias, salva/carregada em JSON.",
+    "MotorABNT aceita preferencias e aplica POP automaticamente quando pop.ativo=True, depois das margens.",
+    "ResultadoFormatacao ganhou pop_aplicado: bool.",
+    "120 testes pytest passando."
   ],
   "pending_actions": [
-    "Aguardando escolha do proximo passo: numeracao de paginas, capa/folha de rosto, sumario automatico, ou rodar build_exe.py para gerar dist/FormataABNT.exe."
+    "Aguardando definicao do proximo passo: build do executavel (build_exe.py), sumario automatico, numeracao de paginas ABNT, capa/folha de rosto, ou outra melhoria."
   ],
   "recent_files": [
-    "abnt_references.py",
-    "formata_abnt/referencias.py",
+    "formata_abnt/pop.py",
+    "formata_abnt/config.py",
+    "abnt_engine.py",
     "app_gui.py",
-    "tests/test_abnt_references.py",
-    "tests/test_referencias_docx.py",
+    "tests/test_pop.py",
+    "tests/test_config.py",
+    "tests/test_abnt_engine.py",
     "tests/test_app_gui.py",
-    "README.md"
+    "README.md",
+    "pyproject.toml"
   ]
 }

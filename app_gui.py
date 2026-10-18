@@ -19,11 +19,12 @@ import customtkinter as ctk
 
 from abnt_engine import MotorABNT, ResultadoFormatacao
 from abnt_references import ABNTReferenceFormatter, Referencia
-from formata_abnt import historico, referencias
+from formata_abnt import historico, pop, referencias
 from formata_abnt.caminhos import nome_saida_padrao
 from formata_abnt.config import Preferencias, carregar_preferencias, salvar_preferencias
 from formata_abnt.docx_io import abrir, salvar
 from formata_abnt.normas import NormasABNT
+from formata_abnt.pop import ConfiguracaoPOP, texto_resumo
 
 try:  # Drag-and-drop é opcional; sem ele a GUI segue funcionando.
     from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -134,6 +135,7 @@ class AplicacaoABNT(_JanelaBase):
         self.abas.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
         self._montar_aba_documento(self.abas.add("Formatar Documento"))
         self._montar_aba_referencias(self.abas.add("Referências ABNT"))
+        self._montar_aba_pop(self.abas.add("POP / Empresarial"))
 
     def _montar_cabecalho(self) -> None:
         """Cabeçalho com título e alternador de tema."""
@@ -380,7 +382,202 @@ class AplicacaoABNT(_JanelaBase):
             command=self._ordenar_docx,
         ).grid(row=linha + 2, column=0, sticky="ew", padx=10, pady=(0, 12))
 
-    # ── Formulário de referências ───────────────────────────────────────────
+    def _montar_aba_pop(self, pai: ctk.CTkFrame) -> None:
+        """Aba de configuração do modelo POP / empresarial."""
+        pai.grid_columnconfigure(0, weight=1)
+        pai.grid_rowconfigure(2, weight=1)
+
+        self.check_pop = ctk.CTkCheckBox(
+            pai,
+            text="Ativar modelo POP / cabeçalho e rodapé empresarial",
+            command=self._ao_toggle_pop,
+        )
+        self.check_pop.grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+
+        self.moldura_pop = ctk.CTkScrollableFrame(pai, height=280)
+        self.moldura_pop.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        self.moldura_pop.grid_columnconfigure(1, weight=1)
+
+        self._campos_pop: dict[str, ctk.CTkBaseClass] = {}
+        campos = [
+            ("nome_empresa", "Nome da empresa"),
+            ("titulo_pop", "Título do POP"),
+            ("codigo", "Código"),
+            ("revisao", "Revisão"),
+            ("area_responsavel", "Área responsável"),
+            ("elaborado_por", "Elaborado por"),
+            ("aprovado_por", "Aprovado por"),
+            ("data_emissao", "Data de emissão"),
+            ("classificacao", "Classificação"),
+        ]
+        for indice, (chave, rotulo) in enumerate(campos):
+            ctk.CTkLabel(self.moldura_pop, text=rotulo, anchor="w").grid(
+                row=indice, column=0, sticky="w", padx=(8, 10), pady=4
+            )
+            entrada = ctk.CTkEntry(self.moldura_pop, placeholder_text=rotulo)
+            entrada.grid(row=indice, column=1, sticky="ew", padx=(0, 8), pady=4)
+            self._campos_pop[chave] = entrada
+
+        # Logo: entrada + botão selecionar
+        linha_logo = len(campos)
+        ctk.CTkLabel(self.moldura_pop, text="Logo", anchor="w").grid(
+            row=linha_logo, column=0, sticky="w", padx=(8, 10), pady=4
+        )
+        linha_logo_frame = ctk.CTkFrame(self.moldura_pop, fg_color="transparent")
+        linha_logo_frame.grid(row=linha_logo, column=1, sticky="ew", padx=(0, 8), pady=4)
+        linha_logo_frame.grid_columnconfigure(0, weight=1)
+
+        self._campos_pop["logo"] = ctk.CTkEntry(linha_logo_frame, placeholder_text="Caminho da imagem")
+        self._campos_pop["logo"].grid(row=0, column=0, sticky="ew")
+        ctk.CTkButton(
+            linha_logo_frame,
+            text="Selecionar",
+            width=90,
+            command=self._selecionar_logo_pop,
+        ).grid(row=0, column=1, padx=(5, 0))
+
+        # Preview
+        moldura_preview = ctk.CTkFrame(pai)
+        moldura_preview.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        moldura_preview.grid_columnconfigure(0, weight=1)
+        moldura_preview.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(
+            moldura_preview,
+            text="Prévia do cabeçalho/rodapé",
+            font=ctk.CTkFont(size=13, weight="bold"),
+        ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        self.preview_pop = ctk.CTkTextbox(moldura_preview, wrap="word")
+        self.preview_pop.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.preview_pop.configure(state="disabled")
+
+        # Botões
+        botoes = ctk.CTkFrame(pai, fg_color="transparent")
+        botoes.grid(row=3, column=0, sticky="ew", padx=10, pady=(0, 10))
+        botoes.grid_columnconfigure((0, 1, 2), weight=1)
+
+        ctk.CTkButton(
+            botoes,
+            text="Atualizar prévia",
+            command=self._atualizar_preview_pop,
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+
+        ctk.CTkButton(
+            botoes,
+            text="Salvar como padrão",
+            fg_color=CORES["azul"],
+            hover_color=CORES["azul_hover"],
+            command=self._salvar_pop,
+        ).grid(row=0, column=1, sticky="ew", padx=5)
+
+        ctk.CTkButton(
+            botoes,
+            text="Aplicar a um documento .docx",
+            fg_color=CORES["verde"],
+            hover_color=CORES["verde_hover"],
+            command=self._aplicar_pop_a_documento,
+        ).grid(row=0, column=2, sticky="ew", padx=(5, 0))
+
+        self._carregar_pop_na_interface()
+        self._ao_toggle_pop()
+
+    def _ler_campo_pop(self, chave: str) -> str:
+        """Lê o valor de um campo da aba POP."""
+        widget = self._campos_pop.get(chave)
+        if widget is None:
+            return ""
+        return widget.get().strip()
+
+    def _config_pop_da_interface(self) -> ConfiguracaoPOP:
+        """Monta ConfiguracaoPOP a partir dos widgets da aba."""
+        return ConfiguracaoPOP(
+            ativo=bool(self.check_pop.get()),
+            nome_empresa=self._ler_campo_pop("nome_empresa"),
+            logo=self._ler_campo_pop("logo"),
+            titulo_pop=self._ler_campo_pop("titulo_pop"),
+            codigo=self._ler_campo_pop("codigo"),
+            revisao=self._ler_campo_pop("revisao"),
+            area_responsavel=self._ler_campo_pop("area_responsavel"),
+            elaborado_por=self._ler_campo_pop("elaborado_por"),
+            aprovado_por=self._ler_campo_pop("aprovado_por"),
+            data_emissao=self._ler_campo_pop("data_emissao"),
+            classificacao=self._ler_campo_pop("classificacao") or pop.PADRAO_CLASSIFICACAO,
+        )
+
+    def _carregar_pop_na_interface(self) -> None:
+        """Preenche a aba POP com as preferências salvas."""
+        cfg = self.preferencias.pop
+        self.check_pop.select() if cfg.ativo else self.check_pop.deselect()
+        for chave, widget in self._campos_pop.items():
+            widget.delete(0, "end")
+            widget.insert(0, getattr(cfg, chave, ""))
+        self._atualizar_preview_pop()
+
+    def _ao_toggle_pop(self) -> None:
+        """Habilita/desabilita os campos POP conforme o checkbox."""
+        ativo = bool(self.check_pop.get())
+        for widget in self._campos_pop.values():
+            if ativo:
+                widget.configure(state="normal")
+            else:
+                widget.configure(state="disabled")
+        self._atualizar_preview_pop()
+
+    def _atualizar_preview_pop(self) -> None:
+        """Atualiza a prévia textual do modelo POP."""
+        cfg = self._config_pop_da_interface()
+        self.preview_pop.configure(state="normal")
+        self.preview_pop.delete("1.0", "end")
+        self.preview_pop.insert("1.0", pop.texto_resumo(cfg))
+        self.preview_pop.configure(state="disabled")
+
+    def _selecionar_logo_pop(self) -> None:
+        """Abre o diálogo para escolher a imagem do logo."""
+        caminho = filedialog.askopenfilename(
+            title="Selecione o logo",
+            filetypes=[("Imagens", "*.png *.jpg *.jpeg *.bmp"), ("Todos", "*.*")],
+            initialdir=self.preferencias.ultima_pasta or None,
+        )
+        if not caminho:
+            return
+        escolhido = Path(caminho)
+        self.preferencias.ultima_pasta = str(escolhido.parent)
+        salvar_preferencias(self.preferencias)
+        self._campos_pop["logo"].delete(0, "end")
+        self._campos_pop["logo"].insert(0, str(escolhido))
+        self._atualizar_preview_pop()
+
+    def _salvar_pop(self) -> None:
+        """Persiste a configuração POP."""
+        self.preferencias.pop = self._config_pop_da_interface()
+        salvar_preferencias(self.preferencias)
+        self._atualizar_preview_pop()
+        self._registrar_log("Configuração POP salva como padrão.")
+        messagebox.showinfo("Concluído", "Configuração POP salva com sucesso.")
+
+    def _aplicar_pop_a_documento(self) -> None:
+        """Aplica o modelo POP a um arquivo .docx escolhido."""
+        cfg = self._config_pop_da_interface()
+        if not cfg.ativo:
+            messagebox.showinfo(
+                "Modelo desativado",
+                "Marque a opção 'Ativar modelo POP' antes de aplicar.",
+            )
+            return
+
+        destino = self._escolher_docx("Selecione o documento que receberá o modelo POP")
+        if destino is None:
+            return
+
+        try:
+            documento = abrir(destino)
+            pop.aplicar_modelo_pop(documento, cfg)
+            salvar(documento, destino)
+        except Exception as erro:  # noqa: BLE001 - reportado ao usuário
+            messagebox.showerror("Falha ao aplicar POP", str(erro))
+            return
+
+        self._registrar_log(f"Modelo POP aplicado em: {destino}")
+        messagebox.showinfo("Concluído", "Modelo POP aplicado com sucesso.")
 
     def _trocar_tipo_referencia(self, tipo: str) -> None:
         """Reconstrói o formulário conforme o tipo escolhido."""
@@ -794,7 +991,7 @@ class AplicacaoABNT(_JanelaBase):
                 fonte_corpo=self.preferencias.fonte,
                 fonte_titulo=self.preferencias.fonte,
             )
-            motor = MotorABNT(normas)
+            motor = MotorABNT(normas, preferencias=self.preferencias)
             resultado = motor.processar(
                 self.arquivo_entrada,
                 progresso=lambda msg: self.after(0, self._registrar_log, msg),

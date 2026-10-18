@@ -15,6 +15,10 @@ ABNT. Roda 100% local, sem internet, sem servidor e sem Docker.
   negrito real, **reanálise automática do negrito** em referências já existentes,
   lista de referências em preparo com inserção em lote e ordenação alfabética
   automática na seção REFERÊNCIAS.
+- **Modelo POP / Empresarial** — cabeçalho e rodapé opcionais para Procedimentos
+  Operacionais Padronizados e documentos corporativos (logo, título, código,
+  revisão, área, classificação e numeração de páginas), ativados por checkbox na
+  aba própria para não interferir na formatação ABNT comum.
 - **Sanitização** — remove espaços invisíveis, espaços repetidos, quebras duplas e
   artefatos de cópia da web/PDF.
 - **Preservação de marcações** — negrito, itálico e sublinhado do texto são mantidos.
@@ -68,6 +72,19 @@ python app_gui.py
 
 > O motor de formatação também executa essa reanálise automaticamente ao processar
 > o documento — a seção REFERÊNCIAS sai corrigida, realçada e ordenada.
+
+## Uso — Aba "POP / Empresarial"
+
+1. Marque **"Ativar modelo POP / cabeçalho e rodapé empresarial"**.
+2. Preencha os campos: nome da empresa, logo, título do POP, código, revisão,
+   área responsável, elaborado por, aprovado por, data de emissão e classificação.
+3. **Atualizar prévia** mostra como ficará o cabeçalho e o rodapé.
+4. **Salvar como padrão** guarda essa configuração para próximos documentos.
+5. **Aplicar a um documento .docx** insere o cabeçalho/rodapé no arquivo escolhido.
+
+Quando o modelo POP está ativo, ele é aplicado automaticamente ao clicar em
+**Formatar Documento** na aba principal. Com o checkbox desmarcado, o documento
+recebe apenas a formatação ABNT comum, sem cabeçalho nem rodapé empresarial.
 
 ## Uso — Como biblioteca
 
@@ -126,6 +143,7 @@ Formata-oABNT/
 │   ├── estilos.py        # Estilo ABNT_CitacaoLonga
 │   ├── citacao_longa.py  # Detecção de citações longas (NBR 10520)
 │   ├── referencias.py    # Seção REFERÊNCIAS: inserir, realçar e ordenar (NBR 6023)
+│   ├── pop.py            # Modelo POP: cabeçalho e rodapé empresarial
 │   ├── sanitizador.py    # Limpeza de artefatos de cópia
 │   ├── docx_io.py        # Abrir/salvar .docx
 │   ├── caminhos.py       # Nomes de arquivo de saída

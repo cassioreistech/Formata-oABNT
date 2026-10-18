@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+from formata_abnt.pop import ConfiguracaoPOP
 
 NOME_APP = "FormataABNT"
 
@@ -29,6 +31,7 @@ class Preferencias:
     fonte: str = "Arial"
     tema: str = "dark"
     ultima_pasta: str | None = None
+    pop: ConfiguracaoPOP = field(default_factory=ConfiguracaoPOP)
 
 
 def carregar_preferencias(caminho: str | Path | None = None) -> Preferencias:
@@ -44,6 +47,14 @@ def carregar_preferencias(caminho: str | Path | None = None) -> Preferencias:
 
     campos = set(Preferencias.__dataclass_fields__)
     validos = {chave: valor for chave, valor in dados.items() if chave in campos}
+
+    if isinstance(validos.get("pop"), dict):
+        pop_campos = set(ConfiguracaoPOP.__dataclass_fields__)
+        pop_validos = {
+            chave: valor for chave, valor in validos["pop"].items() if chave in pop_campos
+        }
+        validos["pop"] = ConfiguracaoPOP(**pop_validos)
+
     return Preferencias(**validos)
 
 
